@@ -73,7 +73,92 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      body::after { animation: none; }
+      body::after,
+      .bg-fx span { animation: none !important; }
+    }
+
+    .bg-fx {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .bg-fx span {
+      position: absolute;
+      display: block;
+      border-radius: 50%;
+      will-change: transform, opacity;
+    }
+
+    .bg-fx .orb {
+      filter: blur(2px);
+      opacity: 0.55;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 220, 140, 0.55), rgba(255, 140, 40, 0.12) 55%, transparent 70%);
+      animation: orb-float linear infinite;
+    }
+
+    .bg-fx .orb:nth-child(1) {
+      width: 180px; height: 180px; left: 8%; top: 18%;
+      animation-duration: 22s; animation-delay: -2s;
+    }
+    .bg-fx .orb:nth-child(2) {
+      width: 120px; height: 120px; right: 10%; top: 28%;
+      background: radial-gradient(circle at 30% 30%, rgba(120, 190, 255, 0.4), rgba(40, 100, 180, 0.1) 55%, transparent 70%);
+      animation-duration: 18s; animation-delay: -6s;
+    }
+    .bg-fx .orb:nth-child(3) {
+      width: 220px; height: 220px; left: 55%; bottom: 8%;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 100, 70, 0.28), rgba(120, 40, 20, 0.08) 55%, transparent 70%);
+      animation-duration: 26s; animation-delay: -10s;
+    }
+
+    .bg-fx .spark {
+      width: 5px; height: 5px;
+      background: #ffd78a;
+      box-shadow: 0 0 10px rgba(255, 200, 100, 0.8);
+      opacity: 0.7;
+      animation: spark-rise linear infinite;
+    }
+
+    .bg-fx .spark:nth-child(4) { left: 15%; bottom: -10%; animation-duration: 14s; animation-delay: 0s; }
+    .bg-fx .spark:nth-child(5) { left: 28%; bottom: -10%; width: 3px; height: 3px; animation-duration: 11s; animation-delay: -3s; }
+    .bg-fx .spark:nth-child(6) { left: 42%; bottom: -10%; animation-duration: 16s; animation-delay: -7s; }
+    .bg-fx .spark:nth-child(7) { left: 58%; bottom: -10%; width: 4px; height: 4px; animation-duration: 12s; animation-delay: -1s; }
+    .bg-fx .spark:nth-child(8) { left: 72%; bottom: -10%; animation-duration: 15s; animation-delay: -5s; }
+    .bg-fx .spark:nth-child(9) { left: 86%; bottom: -10%; width: 3px; height: 3px; animation-duration: 13s; animation-delay: -9s; }
+
+    .bg-fx .streak {
+      width: 2px;
+      height: 70px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, transparent, rgba(255, 210, 120, 0.55), transparent);
+      opacity: 0.35;
+      animation: streak-fall linear infinite;
+    }
+
+    .bg-fx .streak:nth-child(10) { left: 20%; top: -20%; animation-duration: 9s; animation-delay: -2s; }
+    .bg-fx .streak:nth-child(11) { left: 48%; top: -20%; height: 100px; animation-duration: 12s; animation-delay: -5s; }
+    .bg-fx .streak:nth-child(12) { left: 78%; top: -20%; height: 60px; animation-duration: 8s; animation-delay: -1s; }
+
+    @keyframes orb-float {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      33%  { transform: translate3d(30px, -24px, 0) scale(1.05); }
+      66%  { transform: translate3d(-22px, 18px, 0) scale(0.96); }
+      100% { transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @keyframes spark-rise {
+      0%   { transform: translate3d(0, 0, 0); opacity: 0; }
+      15%  { opacity: 0.85; }
+      100% { transform: translate3d(18px, -110vh, 0); opacity: 0; }
+    }
+
+    @keyframes streak-fall {
+      0%   { transform: translate3d(0, 0, 0) rotate(12deg); opacity: 0; }
+      12%  { opacity: 0.4; }
+      100% { transform: translate3d(-24px, 120vh, 0) rotate(12deg); opacity: 0; }
     }
 
     .brand {
@@ -374,6 +459,21 @@
   </style>
 </head>
 <body>
+  <div class="bg-fx" aria-hidden="true">
+    <span class="orb"></span>
+    <span class="orb"></span>
+    <span class="orb"></span>
+    <span class="spark"></span>
+    <span class="spark"></span>
+    <span class="spark"></span>
+    <span class="spark"></span>
+    <span class="spark"></span>
+    <span class="spark"></span>
+    <span class="streak"></span>
+    <span class="streak"></span>
+    <span class="streak"></span>
+  </div>
+
   <button type="button" class="credits-button" id="creditsBtn">Credits</button>
 
   <header class="brand">
@@ -417,6 +517,10 @@
       <div class="credits-section">
         <div class="credits-item"><strong>Creator of website:</strong> Ynot</div>
         <div class="credits-item"><strong>Hosted on:</strong> GitHub Pages</div>
+        <div class="credits-item">
+          <strong>Partner / Close Friend:</strong>
+          <a href="https://ggmodding.github.io/ggdropmansmoddingtools/" target="_blank" rel="noopener noreferrer">GGdropman</a>
+        </div>
         <div class="credits-item">
           <strong>Biggest Support:</strong>
           <a href="https://discord.gg/4hGKAHdvp6" target="_blank" rel="noopener noreferrer">GZO</a>
