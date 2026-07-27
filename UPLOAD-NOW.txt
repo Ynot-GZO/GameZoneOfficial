@@ -1,0 +1,22 @@
+﻿UPLOAD THESE FILES TO THE ROOT of your GitHub repo (Ynot-GZO/GameZoneOfficial):
+Do NOT put them in folders. Replace existing files when asked.
+
+REQUIRED (fixes BL4 404 + adds Generation Zero button):
+  index.html
+  genzero-editor.html
+  genzero-app.js
+  editor.html          (Palworld — re-upload; Gen Zero overwrote it earlier)
+  gzo-data.js
+  rsdw-editor.html
+  rsdw-data.js
+  bl4-editor.html
+  bl4.master.json.gz
+
+After upload, hard-refresh:
+  https://ynot-gzo.github.io/GameZoneOfficial/
+
+Correct links after fix:
+  BL4:        .../bl4-editor.html
+  Palworld:   .../editor.html
+  RSDW:       .../rsdw-editor.html
+  Gen Zero:   .../genzero-editor.html
