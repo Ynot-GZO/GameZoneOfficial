@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GZO - Car Mechanic Simulator 2018 Save Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #101214;
+      --bg2: #171a1d;
+      --panel: #1c2126;
+      --panel2: #232a31;
+      --line: #323b45;
+      --text: #eef2f6;
+      --muted: #9aa6b2;
+      --accent: #f0a04b;
+      --accent2: #8ea8c3;
+      --danger: #ef7a6d;
+      --ok: #7cb87a;
+      --radius: 12px;
+      --font: "DM Sans", system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(ellipse 70% 45% at 50% -10%, rgba(240, 160, 75, 0.1), transparent 55%),
+        radial-gradient(ellipse 50% 35% at 90% 20%, rgba(142, 168, 195, 0.06), transparent 50%),
+        linear-gradient(180deg, #14181c 0%, var(--bg) 100%);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 1.25rem 1.2rem 3rem; }
+    .site-back-link {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      margin-bottom: 14px; text-decoration: none; font-weight: 600; font-size: 0.92rem;
+      color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+      background: var(--panel); padding: 7px 14px;
+    }
+    .site-back-link:hover { color: var(--text); border-color: var(--accent); }
+    .topbar { margin-bottom: 1.1rem; }
+    .brand h1 {
+      margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700;
+      letter-spacing: -0.02em; color: var(--text);
+    }
+    .brand h1 span { color: var(--accent); }
+    .brand p { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.95rem; }
+    .btn {
+      appearance: none; border: 1px solid var(--line); background: var(--panel2);
+      color: var(--text); border-radius: 9px; padding: 0.55rem 0.9rem; font: inherit; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+    }
+    .btn:hover { border-color: #4a5663; background: #2a323b; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: rgba(240, 160, 75, 0.14); border-color: rgba(240, 160, 75, 0.45); color: #ffe8cc; }
+    .btn-primary:hover { background: rgba(240, 160, 75, 0.22); }
+    .btn-warn { border-color: rgba(240, 160, 75, 0.45); color: #ffe7a8; }
+    .btn-ok { border-color: rgba(124, 184, 122, 0.4); color: #d8ffe0; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 1.05rem 1.15rem; margin-bottom: 1rem;
+    }
+    .drop {
+      border: 1.5px dashed #3d4854; border-radius: var(--radius);
+      padding: 1.6rem 1.1rem; text-align: center; background: rgba(0,0,0,0.18); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop:hover, .drop.drag { border-color: var(--accent); background: rgba(240, 160, 75, 0.06); }
+    .drop strong { display: block; color: var(--accent); font-size: 1.05rem; margin-bottom: 0.4rem; }
+    .drop .sub { color: var(--muted); font-size: 0.92rem; line-height: 1.45; }
+    .drop input { display: none; }
+    .steps {
+      margin-top: 1rem; display: grid; gap: 0.55rem;
+      color: var(--muted); font-size: 0.9rem; line-height: 1.45;
+    }
+    .steps div { padding-left: 0.1rem; }
+    .steps b { color: var(--text); font-weight: 600; }
+    .path {
+      margin-top: 0.85rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+      background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 0.65rem 0.75rem;
+      word-break: break-all;
+    }
+    .meta { display: grid; gap: 0.3rem; font-size: 0.88rem; color: var(--muted); }
+    .meta b { color: var(--text); font-weight: 600; }
+    .status { margin: 0.65rem 0 1rem; font-size: 0.92rem; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--danger); }
+    .tabs {
+      display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.9rem;
+      padding: 0.3rem; background: var(--bg2); border: 1px solid var(--line); border-radius: 999px;
+    }
+    .tab {
+      border: 0; background: transparent; color: var(--muted);
+      border-radius: 999px; padding: 0.45rem 0.95rem; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: #1a1208; background: var(--accent); }
+    .view { display: none; }
+    .view.active { display: block; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.28rem; font-weight: 500; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 0.75rem; }
+    input[type="number"], input[type="text"], select {
+      width: 100%; border: 1px solid var(--line); background: var(--bg2); color: var(--text);
+      border-radius: 8px; padding: 0.55rem 0.65rem; font: inherit;
+    }
+    input:focus, select:focus { outline: 2px solid rgba(240, 160, 75, 0.35); border-color: var(--accent); }
+    .hint { color: var(--muted); font-size: 0.88rem; margin: 0 0 0.85rem; line-height: 1.45; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem;
+      padding: 0.75rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    }
+    .grid-checks {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.3rem;
+      max-height: 400px; overflow: auto; padding: 0.45rem; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--bg2);
+    }
+    .chk { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.4rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+    .chk:hover { background: rgba(255,255,255,0.04); }
+    .chk input { accent-color: var(--accent); }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th, .data-table td { border-bottom: 1px solid var(--line); padding: 0.45rem 0.4rem; text-align: left; }
+    .data-table th { color: var(--muted); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: var(--panel); }
+    .data-table input[type="number"] { min-width: 0; padding: 0.35rem 0.45rem; font-size: 0.85rem; }
+    .table-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
+    .section {
+      border: 1px solid var(--line); border-radius: 10px; background: var(--bg2);
+      padding: 0.9rem 0.95rem; margin-bottom: 0.85rem;
+    }
+    .section:last-child { margin-bottom: 0; }
+    .section-title {
+      margin: 0 0 0.7rem; font-size: 0.95rem; font-weight: 700; color: var(--accent2);
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .section-title span { color: var(--muted); font-weight: 500; font-size: 0.82rem; }
+    .upgrade-row {
+      display: flex; align-items: center; gap: 0.55rem; padding: 0.45rem 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem;
+    }
+    .upgrade-row:last-child { border-bottom: 0; }
+    .upgrade-row label { margin: 0; flex: 1; cursor: pointer; color: var(--text); font-size: 0.88rem; }
+    .badge {
+      font-size: 0.72rem; font-family: var(--mono); color: var(--muted);
+      background: rgba(0,0,0,0.25); border-radius: 4px; padding: 0.15rem 0.35rem;
+    }
+    .hidden { display: none !important; }
+    code { font-family: var(--mono); font-size: 0.84em; }
+    .part-name { font-weight: 600; color: var(--text); line-height: 1.25; }
+    .part-id {
+      margin-top: 0.15rem; font-family: var(--mono); font-size: 0.72rem;
+      color: var(--muted); word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="site-back-link" href="index.html">Back to GZO editors</a>
+    <div class="topbar">
+      <div class="brand">
+        <h1>Car Mechanic <span>2018</span></h1>
+        <p>Edit your profile save locally. Nothing is uploaded.</p>
+      </div>
+    </div>
+
+    <div class="panel" id="folderPanel">
+      <div class="drop" id="drop" role="button" tabindex="0">
+        <strong>Select Profile folder</strong>
+        <div class="sub">Click here and pick your Profile0, Profile1, Profile2, or Profile3 folder</div>
+        <input type="file" id="folderInput" webkitdirectory directory multiple />
+      </div>
+      <div class="steps">
+        <div>1. Open: <b>AppData / LocalLow / Red Dot Games / Car Mechanic Simulator 2018</b></div>
+        <div>2. Pick <b>Profile0</b> (or Profile1 / Profile2 / Profile3)</div>
+        <div>3. That folder must contain <b>GlobalData.dat</b></div>
+        <div>4. <b>Back up the whole Profile folder</b> before editing</div>
+      </div>
+      <div class="path">%AppData%\LocalLow\Red Dot Games\Car Mechanic Simulator 2018\Profile0</div>
+
+      <div class="actions" style="margin-top:0.85rem;justify-content:center">
+        <button type="button" class="btn btn-warn" id="btnLoadDemo">Load demo save</button>
+      </div>
+      <p class="hint" style="text-align:center;margin-top:0.55rem">Try the editor with a built-in sample profile (no folder needed).</p>
+    </div>
+    <div class="status" id="status">Waiting for a folder...</div>
+
+    <div id="editorRoot" class="hidden">
+      <div class="toolbar">
+        <button type="button" class="btn btn-ok" id="btnSaveFolder" disabled>Save to folder</button>
+        <button type="button" class="btn" id="btnDownloadZip" disabled>Download all (.zip)</button>
+        <button type="button" class="btn" id="btnDlGlobal" disabled>GlobalData.dat</button>
+        <button type="button" class="btn" id="btnDlUpgrades" disabled>upgrades.dat</button>
+        <button type="button" class="btn" id="btnDlInventory" disabled>inventory.dat</button>
+        <button type="button" class="btn" id="btnDlWarehouse" disabled>warehouse.dat</button>
+        <button type="button" class="btn" id="btnDlJob" disabled>JobData.dat</button>
+        <button type="button" class="btn" id="btnChangeFolder">Pick another folder</button>
+      </div>
+      <div class="meta" id="folderMeta" style="margin-bottom:0.85rem"></div>
+
+      <div class="tabs" id="tabs">
+        <button type="button" class="tab active" data-tab="character">Character</button>
+        <button type="button" class="tab" data-tab="upgrades">Upgrades</button>
+        <button type="button" class="tab" data-tab="barns">Barns + Missions</button>
+        <button type="button" class="tab" data-tab="inventory">Inventory</button>
+        <button type="button" class="tab" data-tab="data">Data</button>
+      </div>
+
+      <div class="panel view active" id="view-character">
+        <div class="section">
+          <h3 class="section-title">Player stats <span>Money, level, and XP</span></h3>
+          <div class="row">
+            <div><label for="money">Money</label><input type="number" id="money" min="0" step="1" /></div>
+            <div><label for="level">Level</label><input type="number" id="level" min="1" max="50" step="1" /></div>
+            <div><label for="xp">XP</label><input type="number" id="xp" min="0" step="1" /></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxCharacter">Max all</button>
+          </div>
+          <p class="hint hidden" id="globalFallbackHint"></p>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-upgrades">
+        <div class="section">
+          <h3 class="section-title">Garage upgrades <span id="upgradeCount">0 loaded</span></h3>
+          <p class="hint">Checked = all tiers unlocked for that upgrade.</p>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnUnlockAllUpgrades">Unlock all</button>
+          </div>
+          <div id="upgradeList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-barns">
+        <div class="section">
+          <h3 class="section-title">Barns / sheds <span>Shed availability and visibility</span></h3>
+          <div class="row">
+            <div><label for="shedsAvailable">Sheds available</label><input type="number" id="shedsAvailable" min="0" step="1" /></div>
+          </div>
+          <label>Shed visibility</label>
+          <div class="grid-checks" id="shedChecks"></div>
+        </div>
+        <div class="section">
+          <h3 class="section-title">Missions <span>Story / mission progress flags</span></h3>
+          <div class="row">
+            <div><label for="missionsFinished">Missions finished</label><input type="number" id="missionsFinished" min="0" step="1" /></div>
+            <div>
+              <label for="currentMissionDone">Current mission done</label>
+              <select id="currentMissionDone">
+                <option value="0">No (0)</option>
+                <option value="1">Yes (1)</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnCompleteMissions">Complete all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-inventory">
+        <div class="section">
+          <h3 class="section-title">Inventory items <span id="invCount">0 items</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxCondition">Max condition</button>
+            <button type="button" class="btn btn-primary" id="btnMaxAmounts">Max amounts</button>
+            <button type="button" class="btn btn-primary" id="btnExamineAll">Examine all</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="invTable">
+              <thead>
+                <tr>
+                  <th>Part</th>
+                  <th>Condition</th>
+                  <th>Amount</th>
+                  <th>Examined</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-data">
+        <div class="section">
+          <h3 class="section-title">Warehouses <span>Unlock storage buildings</span></h3>
+          <div class="row">
+            <div><label for="warehousesUnlocked">Unlocked warehouses (1-8)</label><input type="number" id="warehousesUnlocked" min="1" max="8" step="1" /></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnUnlockWarehouses">Unlock all warehouses</button>
+          </div>
+        </div>
+        <div class="section">
+          <h3 class="section-title">Job parts <span id="jobPartsSummary">No JobData.dat</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMarkJobPartsDone">Mark all job parts done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    const GLOBAL_MARKER = new Uint8Array([0x08, 0x08, 0x08, 0x08, 0x01, 0x08, 0x01]);
+    const FALLBACK_MONEY = 186;
+    const FALLBACK_LEVEL = 190;
+    const FALLBACK_XP = 194;
+
+    const UPGRADE_IDS = [
+      "shop_discount", "unlock_tablet", "unlock_obd", "bigger_income", "expected_price",
+      "fast_movement", "unlock_electronic", "unlock_cylinder", "fast_mount", "instant_examine",
+      "fast_partremove", "unlock_tires", "unlock_fuel", "cheaper_tow", "luck",
+      "fast_examine", "cheaper_parking", "garage_upgrade", "sale"
+    ];
+
+    const UPGRADE_LABELS = {
+      shop_discount: "Shop Discount",
+      unlock_tablet: "Unlock Tablet",
+      unlock_obd: "Unlock OBD",
+      bigger_income: "Bigger Income",
+      expected_price: "Expected Price",
+      fast_movement: "Fast Movement",
+      unlock_electronic: "Unlock Electronic",
+      unlock_cylinder: "Unlock Cylinder",
+      fast_mount: "Fast Mount",
+      instant_examine: "Instant Examine",
+      fast_partremove: "Fast Part Remove",
+      unlock_tires: "Unlock Tires",
+      unlock_fuel: "Unlock Fuel",
+      cheaper_tow: "Cheaper Tow",
+      luck: "Luck",
+      fast_examine: "Fast Examine",
+      cheaper_parking: "Cheaper Parking",
+      garage_upgrade: "Garage Upgrade",
+      sale: "Sale Bonus"
+    };
+
+    const SAVE_FILES = [
+      { key: "global", name: "GlobalData.dat", required: true },
+      { key: "upgrades", name: "upgrades.dat", required: false },
+      { key: "inventory", name: "inventory.dat", required: false },
+      { key: "warehouse", name: "warehouse.dat", required: false },
+      { key: "job", name: "JobData.dat", required: false }
+    ];
+
+    const DEMO_SAVE = {"GlobalData.dat":"AAEAAAD/////AQAAAAAAAAAMAgAAABRBc3NlbWJseS1Vbml0eVNjcmlwdAUBAAAAEUdsb2JhbERhdGFXcmFwcGVyBwAAAAtwbGF5ZXJNb25leQtQbGF5ZXJMZXZlbAlwbGF5ZXJFeHAOU2hlZHNBdmFpbGFibGUMU2hlZHNWaXNpYmxlEE1pc3Npb25zRmluaXNoZWQSQ3VycmVudE1pc3Npb25Eb25lAAAAAAcAAAgICAgBCAECAAAAHWIQADEAAAAT2QAADwAAAAkDAAAAAAAAAAAPAwAAABUAAAABAQABAQEAAQEBAQEBAAEAAAABAQEBCw==","upgrades.dat":"AAEAAAD/////AQAAAAAAAAAMAgAAABRBc3NlbWJseS1Vbml0eVNjcmlwdAUBAAAAEVVwZ3JhZGVTeXN0ZW1EYXRhAgAAAAJpZAh1bmxvY2tlZAMDf1N5c3RlbS5Db2xsZWN0aW9ucy5HZW5lcmljLkxpc3RgMVtbU3lzdGVtLlN0cmluZywgbXNjb3JsaWIsIFZlcnNpb249Mi4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1iNzdhNWM1NjE5MzRlMDg5XV2CAVN5c3RlbS5Db2xsZWN0aW9ucy5HZW5lcmljLkxpc3RgMVtbU3lzdGVtLkJvb2xlYW5bXSwgbXNjb3JsaWIsIFZlcnNpb249Mi4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1iNzdhNWM1NjE5MzRlMDg5XV0CAAAACQMAAAAJBAAAAAQDAAAAf1N5c3RlbS5Db2xsZWN0aW9ucy5HZW5lcmljLkxpc3RgMVtbU3lzdGVtLlN0cmluZywgbXNjb3JsaWIsIFZlcnNpb249Mi4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1iNzdhNWM1NjE5MzRlMDg5XV0DAAAABl9pdGVtcwVfc2l6ZQhfdmVyc2lvbgYAAAgICQUAAAATAAAAEwAAAAQEAAAAggFTeXN0ZW0uQ29sbGVjdGlvbnMuR2VuZXJpYy5MaXN0YDFbW1N5c3RlbS5Cb29sZWFuW10sIG1zY29ybGliLCBWZXJzaW9uPTIuMC4wLjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49Yjc3YTVjNTYxOTM0ZTA4OV1dAwAAAAZfaXRlbXMFX3NpemUIX3ZlcnNpb24DAAASU3lzdGVtLkJvb2xlYW5bXVtdCAgJBgAAABMAAAATAAAAEQUAAAAgAAAABgcAAAANc2hvcF9kaXNjb3VudAYIAAAADXVubG9ja190YWJsZXQGCQAAAAp1bmxvY2tfb2JkBgoAAAANYmlnZ2VyX2luY29tZQYLAAAADmV4cGVjdGVkX3ByaWNlBgwAAAANZmFzdF9tb3ZlbWVudAYNAAAAEXVubG9ja19lbGVjdHJvbmljBg4AAAAPdW5sb2NrX2N5bGluZGVyBg8AAAAKZmFzdF9tb3VudAYQAAAAD2luc3RhbnRfZXhhbWluZQYRAAAAD2Zhc3RfcGFydHJlbW92ZQYSAAAADHVubG9ja190aXJlcwYTAAAAC3VubG9ja19mdWVsBhQAAAALY2hlYXBlcl90b3cGFQAAAARsdWNrBhYAAAAMZmFzdF9leGFtaW5lBhcAAAAPY2hlYXBlcl9wYXJraW5nBhgAAAAOZ2FyYWdlX3VwZ3JhZGUGGQAAAANmaXgNDQcGAAAAAQEAAAAgAAAABwEJGgAAAAkbAAAACRwAAAAJHQAAAAkeAAAACR8AAAAJIAAAAAkhAAAACSIAAAAJIwAAAAkkAAAACSUAAAAJJgAAAAknAAAACSgAAAAJKQAAAAkqAAAACSsAAAAJLAAAAA0NDxoAAAADAAAAAQEBAQ8bAAAAAQAAAAEBDxwAAAABAAAAAQEPHQAAAAEAAAABAQ8eAAAAAQAAAAEBDx8AAAADAAAAAQEBAQ8gAAAAAQAAAAEBDyEAAAABAAAAAQEPIgAAAAMAAAABAQEBDyMAAAADAAAAAQEBAQ8kAAAAAwAAAAEBAQEPJQAAAAEAAAABAQ8mAAAAAQAAAAEBDycAAAABAAAAAQEPKAAAAAEAAAABAA8pAAAAAwAAAAEBAQEPKgAAAAEAAAABAQ8rAAAAAwAAAAEBAQEPLAAAAAcAAAABAQEBAQEBAAs=","inventory.dat":"AAEAAAD/////AQAAAAAAAAAMAgAAABRBc3NlbWJseS1Vbml0eVNjcmlwdAUBAAAADUludmVudG9yeURhdGECAAAADWludmVudG9yeUxpc3QHbGFzdFVJZAMAf1N5c3RlbS5Db2xsZWN0aW9ucy5HZW5lcmljLkxpc3RgMVtbSW52ZW50b3J5SXRlbSwgQXNzZW1ibHktVW5pdHlTY3JpcHQsIFZlcnNpb249MC4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1udWxsXV0IAgAAAAkDAAAAlQMAAAQDAAAAf1N5c3RlbS5Db2xsZWN0aW9ucy5HZW5lcmljLkxpc3RgMVtbSW52ZW50b3J5SXRlbSwgQXNzZW1ibHktVW5pdHlTY3JpcHQsIFZlcnNpb249MC4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1udWxsXV0DAAAABl9pdGVtcwVfc2l6ZQhfdmVyc2lvbgQAAA9JbnZlbnRvcnlJdGVtW10CAAAACAgJBAAAAD8AAAANBQAABwQAAAAAAQAAAAABAAAEDUludmVudG9yeUl0ZW0CAAAACQUAAAAJBgAAAAkHAAAACQgAAAAJCQAAAAkKAAAACQsAAAAJDAAAAAkNAAAACQ4AAAAJDwAAAAkQAAAACREAAAAJEgAAAAkTAAAACRQAAAAJFQAAAAkWAAAACRcAAAAJGAAAAAkZAAAACRoAAAAJGwAAAAkcAAAACR0AAAAJHgAAAAkfAAAACSAAAAAJIQAAAAkiAAAACSMAAAAJJAAAAAklAAAACSYAAAAJJwAAAAkoAAAACSkAAAAJKgAAAAkrAAAACSwAAAAJLQAAAAkuAAAACS8AAAAJMAAAAAkxAAAACTIAAAAJMwAAAAk0AAAACTUAAAAJNgAAAAk3AAAACTgAAAAJOQAAAAk6AAAACTsAAAAJPAAAAAk9AAAACT4AAAAJPwAAAAlAAAAACUEAAAAJQgAAAAlDAAAADcEFBQAAAA1JbnZlbnRvcnlJdGVtDAAAAAJJRAVJbmRleAlDb25kaXRpb24JSXRlbUNvbG9yCXBhaW50VHlwZQVHcm91cAZBbW91bnQKSXNFeGFtaW5lZAxSZXBhaXJBbW91bnQEU2l6ZQNVSWQPZXh0cmFQYXJhbWV0ZXJzAQAABwQAAAAAAAAECAsLCVBhaW50VHlwZQIAAAAICAEIBggESGFzaAIAAAACAAAABkQAAAAPd192OF9wb2N6YXRrb3d5AAAAAAAAgD8JRQAAAAVGAAAACVBhaW50VHlwZQEAAAAHdmFsdWVfXwAIAgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAAASAAAACUcAAAABBgAAAAUAAAAJRAAAAAEAAAAAAIA/CUgAAAABSQAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAEwAAAAlKAAAAAQcAAAAFAAAABksAAAASd192OF9wb2N6YXRrb3d5X2gyAgAAAAAAgD8JTAAAAAFNAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAAAYAAAACU4AAAABCAAAAAUAAAAJSwAAAAMAAAAAAIA/CU8AAAABUAAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAGQAAAAlRAAAAAQkAAAAFAAAABlIAAAAlY2FyX29sc2VuZ3JhbmRjbHViLXdpbmRvd19ib2R5X2xlZnRfMQQAAAAAAIA/CVMAAAABVAAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAPwAAAAlVAAAAAQoAAAAFAAAABlYAAAAmY2FyX29sc2VuZ3JhbmRjbHViLXdpbmRvd19ib2R5X3JpZ2h0XzEFAAAAAACAPwlXAAAAAVgAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAEEAAAAJWQAAAAELAAAABQAAAAZaAAAACnBpb3JhVHlsXzEGAAAAAACAPwlbAAAAAVwAAABGAAAAAAAAAAAAAAABAAAAAQIAAAAAAAAAAAAAAMAAAAAJXQAAAAEMAAAABQAAAAZeAAAAGnp3cm90bmljYVR5bEJlYmVuX29zbG9uYV8xBwAAAAAAgD8JXwAAAAFgAAAARgAAAAAAAAAAAAAAAQAAAAECAAAAAAAAAAAAAADFAAAACWEAAAABDQAAAAUAAAAGYgAAABFzemN6ZWtpQ3lsaW5kZXJfMQgAAAAAAIA/CWMAAAABZAAAAEYAAAAAAAAAAAAAAAEAAAABAQAAAAAAAAAAAAAAzAAAAAllAAAAAQ4AAAAFAAAABmYAAAAaendyb3RuaWNhVHlsQmViZW5fb3Nsb25hXzEJAAAAAACAPwlnAAAAAWgAAABGAAAAAAAAAAAAAAABAAAAAQEAAAAAAAAAAAAAAM0AAAAJaQAAAAEPAAAABQAAAAZqAAAADHdfdjhfa29uY293eQoAAAAAAIA/CWsAAAABbAAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAA7gAAAAltAAAAARAAAAAFAAAABm4AAAAHdjhfYmxvawsAAAAAAIA/CW8AAAABcAAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAQwEAAAlxAAAAAREAAAAFAAAABnIAAAAXendyb3RuaWNhUHJ6b2Rfb3Nsb25hXzEMAAAAAACAPwlzAAAAAXQAAABGAAAAAAAAAAAAAAABAAAAAQEAAAAAAAAAAAAAAGcBAAAJdQAAAAESAAAABQAAAAZ2AAAAE3N0YWJpbGl6YXRvclByem9kXzENAAAAAACAPwl3AAAAAXgAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAHsBAAAJeQAAAAETAAAABQAAAAZ6AAAAEmFtb3J0eXphdG9yUHJ6b2RfMQ4AAAAAAIA/CXsAAAABfAAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAhAEAAAl9AAAAARQAAAAFAAAACXoAAAAPAAAAAACAPwl+AAAAAX8AAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAIUBAAAJgAAAAAEVAAAABQAAAAaBAAAADXdhaGFjekRvbG55XzEQAAAAAACAPwmCAAAAAYMAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAIwBAAAJhAAAAAEWAAAABQAAAAmBAAAAEQAAAAAAgD8JhQAAAAGGAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAACNAQAACYcAAAABFwAAAAUAAAAGiAAAAAh0dWxlamFfMRIAAAAAAIA/CYkAAAABigAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAmgEAAAmLAAAAARgAAAAFAAAABowAAAAbbGFjem5pa1N0YWJpbGl6YXRvcmFQcnpvZF8xEwAAAAAAgD8JjQAAAAGOAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAACcAQAACY8AAAABGQAAAAUAAAAJjAAAABQAAAAAAIA/CZAAAAABkQAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAnQEAAAmSAAAAARoAAAAFAAAABpMAAAAUaTZfb2xkX21pc2thX29sZWpvd2EVAAAAAACAPwmUAAAAAZUAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAALkBAAAJlgAAAAEbAAAABQAAAAaXAAAADnI2X2ZpbHRyX29sZWp1FgAAAAAAgD8JmAAAAAGZAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAAC6AQAACZoAAAABHAAAAAUAAAAGmwAAABByNl9yb2xrYUxhbmN1Y2hhFwAAAAAAgD8JnAAAAAGdAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAADAAQAACZ4AAAABHQAAAAUAAAAGnwAAABJyNl9vc2xvbmFfcm96cnphZHUYAAAAAACAPwmgAAAAAaEAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAMIBAAAJogAAAAEeAAAABQAAAAajAAAAF3I2X2dsb3dpY2FfZG9oY193a2xhZGthGQAAAAAAgD8JpAAAAAGlAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAADPAQAACaYAAAABHwAAAAUAAAAJowAAABoAAAAAAIA/CacAAAABqAAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAA0AEAAAmpAAAAASAAAAAFAAAACaMAAAAbAAAAAACAPwmqAAAAAasAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAANEBAAAJrAAAAAEhAAAABQAAAAatAAAAEWk2X29sZF9yb2xrYVdhbGthHAAAAAAAgD8JrgAAAAGvAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAADZAQAACbAAAAABIgAAAAUAAAAGsQAAAAxpNl9vbGRfd2FsZWsdAAAAAACAPwmyAAAAAbMAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAANsBAAAJtAAAAAEjAAAABQAAAAa1AAAAEWk2X29sZF93YWxLb3Jib3d5HgAAAAAAgD8JtgAAAAG3AAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAADeAQAACbgAAAABJAAAAAUAAAAGuQAAABNyNl9rb2xvX3Bhc293ZV93YWx1HwAAAAAAgD8JugAAAAG7AAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAADfAQAACbwAAAABJQAAAAUAAAAGvQAAABlpNl9vbGRfa29sZWt0b3Jfd3lkZWNob3d5IAAAAAAAgD8JvgAAAAG/AAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAADwAQAACcAAAAABJgAAAAUAAAAGwQAAABVrb3B1bGthUm96ZHppZWxhY3phXzEhAAAAAACAPwnCAAAAAcMAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAPgBAAAJxAAAAAEnAAAABQAAAAbFAAAADHY4X3BvcHljaGFjeiIAAAAAAIA/CcYAAAABxwAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAA/AEAAAnIAAAAASgAAAAFAAAACcUAAAAjAAAAAACAPwnJAAAAAcoAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAP0BAAAJywAAAAEpAAAABQAAAAbMAAAAD3I0X3JvenJ1c3puaWtfMSQAAAAAAIA/Cc0AAAABzgAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAFQIAAAnPAAAAASoAAAAFAAAABtAAAAARemFjaXNrSGFtdWxjb3d5XzElAAAAAACAPwnRAAAAAdIAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAOYCAAAJ0wAAAAErAAAABQAAAAbUAAAAEXphY2lza0hhbXVsY293eV8xJgAAAPRHXT8J1QAAAAHWAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAADtAgAACdcAAAABLAAAAAUAAAAG2AAAAA9zZWF0XzVfbGVhdGhlcjQnAAAAWz5dPwnZAAAAAdoAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAPECAAAJ2wAAAAEtAAAABQAAAAbcAAAAF2JlbmNoX2Zhc3RiYWNrX2xlYXRoZXIyKAAAAAAAgD8J3QAAAAHeAAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAAD1AgAACd8AAAABLgAAAAUAAAAG4AAAACRjYXJfdGVtcGVzdG1hZ251bS1mZW5kZXJfZnJvbnRfcmlnaHQpAAAAajfCPgnhAAAAAeIAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAF8DAAAJ4wAAAAEvAAAABQAAAAbkAAAAIWNhcl90ZW1wZXN0bWFnbnVtLWhlYWRsaWdodF9yaWdodCoAAABaAjE/CeUAAAAB5gAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAYAMAAAnnAAAAATAAAAAFAAAABugAAAAgY2FyX3RlbXBlc3RtYWdudW0taGVhZGxpZ2h0X2xlZnQrAAAAkdl7PgnpAAAAAeoAAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAGEDAAAJ6wAAAAExAAAABQAAAAbsAAAAHmNhcl90ZW1wZXN0bWFnbnVtLWJ1bXBlcl9mcm9udCwAAABG+3w/Ce0AAAAB7gAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAYgMAAAnvAAAAATIAAAAFAAAABvAAAAAWY2FyX3RlbXBlc3RtYWdudW0taG9vZC0AAACuE3w/CfEAAAAB8gAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAZAMAAAnzAAAAATMAAAAFAAAABvQAAAAeY2FyX3RlbXBlc3RtYWdudW0td2luZG93X2Zyb250LgAAAPsb3T4J9QAAAAH2AAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAABlAwAACfcAAAABNAAAAAUAAAAG+AAAABdjYXJfdGVtcGVzdG1hZ251bS10cnVuay8AAACVg20/CfkAAAAB+gAAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAZgMAAAn7AAAAATUAAAAFAAAABvwAAAAhY2FyX3RlbXBlc3RtYWdudW0tdGFpbGxpZ2h0X3JpZ2h0MAAAABYbwT4J/QAAAAH+AAAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAABnAwAACf8AAAABNgAAAAUAAAAGAAEAACBjYXJfdGVtcGVzdG1hZ251bS10YWlsbGlnaHRfbGVmdDEAAACktWk/CQEBAAABAgEAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAaAMAAAkDAQAAATcAAAAFAAAABgQBAAAdY2FyX3RlbXBlc3RtYWdudW0td2luZG93X2JhY2syAAAAZlolPwkFAQAAAQYBAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAGkDAAAJBwEAAAE4AAAABQAAAAYIAQAAIWNhcl90ZW1wZXN0bWFnbnVtLWRvb3JfZnJvbnRfbGVmdDMAAACUoMU+CQkBAAABCgEAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAagMAAAkLAQAAATkAAAAFAAAABgwBAAAdY2FyX3RlbXBlc3RtYWdudW0tbWlycm9yX2xlZnQ0AAAArwl0PwkNAQAAAQ4BAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAGsDAAAJDwEAAAE6AAAABQAAAAYQAQAAI2Nhcl90ZW1wZXN0bWFnbnVtLWZlbmRlcl9mcm9udF9sZWZ0NQAAAK+H+j4JEQEAAAESAQAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAABsAwAACRMBAAABOwAAAAUAAAAGFAEAABpzdGVlcmluZ193aGVlbF9vbGQxKENsb25lKTYAAADCQag+CRUBAAABFgEAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAcAMAAAkXAQAAATwAAAAFAAAABhgBAAAPc2VhdF85X2xlYXRoZXIyNwAAABp2sj4JGQEAAAEaAQAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAABxAwAACRsBAAABPQAAAAUAAAAGHAEAAA9zZWF0XzlfbGVhdGhlcjI4AAAAAlABPwkdAQAAAR4BAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAHIDAAAJHwEAAAE+AAAABQAAAAYgAQAAHGJlbmNoX21hZ251bV9sZWF0aGVyMShDbG9uZSk5AAAA8K4APwkhAQAAASIBAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAHMDAAAJIwEAAAE/AAAABQAAAAYkAQAADnBva3J5d2FCZWJlbl8xOgAAABAhoD4JJQEAAAEmAQAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAACQAwAACScBAAABQAAAAAUAAAAGKAEAAAlzemN6ZWtpXzE7AAAA16ffPgkpAQAAASoBAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAJEDAAAJKwEAAAFBAAAABQAAAAYsAQAAEXN6Y3pla2lDeWxpbmRlcl8xPAAAAIjsjT4JLQEAAAEuAQAARgAAAAAAAAAAAAAAAQAAAAEAAAAAAAAAAAAAAACSAwAACS8BAAABQgAAAAUAAAAGMAEAABRwb2xvc05hcGVkb3dhVHlsbmFfMT0AAAAJT+c+CTEBAAABMgEAAEYAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAkwMAAAkzAQAAAUMAAAAFAAAABjQBAAAaendyb3RuaWNhVHlsQmViZW5fb3Nsb25hXzE+AAAAw1DbPgk1AQAAATYBAABGAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAAAAAAAJQDAAAJNwEAAA9FAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/BUcAAAAESGFzaAEAAAAJaGFzaFRhYmxlAxxTeXN0ZW0uQ29sbGVjdGlvbnMuSGFzaHRhYmxlAgAAAAk4AQAAD0gAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BSgAAAEcAAAAJOQEAAA9MAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AU4AAABHAAAACToBAAAPTwAAAAQAAAALAACAPwAAgD8AAIA/AACAPwFRAAAARwAAAAk7AQAAD1MAAAAEAAAAC4mIiD6JiIg+iYiIPgAAgD8BVQAAAEcAAAAJPAEAAA9XAAAABAAAAAuJiIg+iYiIPomIiD4AAIA/AVkAAABHAAAACT0BAAAPWwAAAAQAAAALAACAPwAAgD8AAIA/AACAPwFdAAAARwAAAAk+AQAAD18AAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BYQAAAEcAAAAJPwEAAA9jAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AWUAAABHAAAACUABAAAPZwAAAAQAAAALAACAPwAAgD8AAIA/AACAPwFpAAAARwAAAAlBAQAAD2sAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BbQAAAEcAAAAJQgEAAA9vAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AXEAAABHAAAACUMBAAAPcwAAAAQAAAALAACAPwAAgD8AAIA/AACAPwF1AAAARwAAAAlEAQAAD3cAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BeQAAAEcAAAAJRQEAAA97AAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AX0AAABHAAAACUYBAAAPfgAAAAQAAAALAACAPwAAgD8AAIA/AACAPwGAAAAARwAAAAlHAQAAD4IAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BhAAAAEcAAAAJSAEAAA+FAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AYcAAABHAAAACUkBAAAPiQAAAAQAAAALAACAPwAAgD8AAIA/AACAPwGLAAAARwAAAAlKAQAAD40AAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BjwAAAEcAAAAJSwEAAA+QAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AZIAAABHAAAACUwBAAAPlAAAAAQAAAALAACAPwAAgD8AAIA/AACAPwGWAAAARwAAAAlNAQAAD5gAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BmgAAAEcAAAAJTgEAAA+cAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AZ4AAABHAAAACU8BAAAPoAAAAAQAAAALAACAPwAAgD8AAIA/AACAPwGiAAAARwAAAAlQAQAAD6QAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BpgAAAEcAAAAJUQEAAA+nAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AakAAABHAAAACVIBAAAPqgAAAAQAAAALAACAPwAAgD8AAIA/AACAPwGsAAAARwAAAAlTAQAAD64AAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BsAAAAEcAAAAJVAEAAA+yAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AbQAAABHAAAACVUBAAAPtgAAAAQAAAALAACAPwAAgD8AAIA/AACAPwG4AAAARwAAAAlWAQAAD7oAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BvAAAAEcAAAAJVwEAAA++AAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AcAAAABHAAAACVgBAAAPwgAAAAQAAAALAACAPwAAgD8AAIA/AACAPwHEAAAARwAAAAlZAQAAD8YAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8ByAAAAEcAAAAJWgEAAA/JAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AcsAAABHAAAACVsBAAAPzQAAAAQAAAALAACAPwAAgD8AAIA/AACAPwHPAAAARwAAAAlcAQAAD9EAAAAEAAAACwAAgD8AAIA/AACAPwAAgD8B0wAAAEcAAAAJXQEAAA/VAAAABAAAAAsAAIA/AACAPwAAgD8AAIA/AdcAAABHAAAACV4BAAAP2QAAAAQAAAALwrxGPsK8Rj7CvEY+AACAPwHbAAAARwAAAAlfAQAAD90AAAAEAAAACwAAgD8AAIA/AACAPwAAgD8B3wAAAEcAAAAJYAEAAA/hAAAABAAAAAvJyMg+goEBP5KRET8AAIA/AeMAAABHAAAACWEBAAAP5QAAAAQAAAALycjIPoKBAT+SkRE/AACAPwHnAAAARwAAAAliAQAAD+kAAAAEAAAAC8nIyD6CgQE/kpERPwAAgD8B6wAAAEcAAAAJYwEAAA/tAAAABAAAAAsw27M9rygGPve/bj4AAIA/Ae8AAABHAAAACWQBAAAP8QAAAAQAAAALMNuzPa8oBj73v24+AACAPwHzAAAARwAAAAllAQAAD/UAAAAEAAAAC8nIyD6CgQE/kpERPwAAgD8B9wAAAEcAAAAJZgEAAA/5AAAABAAAAAsw27M9rygGPve/bj4AAIA/AfsAAABHAAAACWcBAAAP/QAAAAQAAAALycjIPoKBAT+SkRE/AACAPwH/AAAARwAAAAloAQAADwEBAAAEAAAAC0vJCD4boZU+OUVjPgAAgD8BAwEAAEcAAAAJaQEAAA8FAQAABAAAAAvJyMg+goEBP5KRET8AAIA/AQcBAABHAAAACWoBAAAPCQEAAAQAAAALycjIPoKBAT+SkRE/AACAPwELAQAARwAAAAlrAQAADw0BAAAEAAAACwAAAAAAAAAAAAAAAAAAAAABDwEAAEcAAAAJbAEAAA8RAQAABAAAAAvJyMg+goEBP5KRET8AAIA/ARMBAABHAAAACW0BAAAPFQEAAAQAAAALycjIPoKBAT+SkRE/AACAPwEXAQAARwAAAAluAQAADxkBAAAEAAAAC8nIyD6CgQE/kpERPwAAgD8BGwEAAEcAAAAJbwEAAA8dAQAABAAAAAvJyMg+goEBP5KRET8AAIA/AR8BAABHAAAACXABAAAPIQEAAAQAAAALycjIPoKBAT+SkRE/AACAPwEjAQAARwAAAAlxAQAADyUBAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BJwEAAEcAAAAJcgEAAA8pAQAABAAAAAsAAIA/AACAPwAAgD8AAIA/ASsBAABHAAAACXMBAAAPLQEAAAQAAAALAACAPwAAgD8AAIA/AACAPwEvAQAARwAAAAl0AQAADzEBAAAEAAAACwAAgD8AAIA/AACAPwAAgD8BMwEAAEcAAAAJdQEAAA81AQAABAAAAAsAAIA/AACAPwAAgD8AAIA/ATcBAABHAAAACXYBAAAEOAEAABxTeXN0ZW0uQ29sbGVjdGlvbnMuSGFzaHRhYmxlBwAAAApMb2FkRmFjdG9yB1ZlcnNpb24IQ29tcGFyZXIISGFzaFNpemUES2V5cwZWYWx1ZXMQZXF1YWxpdHlDb21wYXJlcgAAAgAFBQILCAgAAEA/fQAAAAoLAAAACXcBAAAJeAEAAAoBOQEAADgBAAAAAEA/fQAAAAoLAAAACXkBAAAJegEAAAoBOgEAADgBAAAAAEA/fQAAAAoLAAAACXsBAAAJfAEAAAoBOwEAADgBAAAAAEA/fQAAAAoLAAAACX0BAAAJfgEAAAoBPAEAADgBAAAAAEA/fQAAAAoLAAAACX8BAAAJgAEAAAoBPQEAADgBAAAAAEA/fQAAAAoLAAAACYEBAAAJggEAAAoBPgEAADgBAAAAAEA/AAAAAAoLAAAACYMBAAAJhAEAAAoBPwEAADgBAAAAAEA/AAAAAAoLAAAACYUBAAAJhgEAAAoBQAEAADgBAAAAAEA/AAAAAAoLAAAACYcBAAAJiAEAAAoBQQEAADgBAAAAAEA/AAAAAAoLAAAACYkBAAAJigEAAAoBQgEAADgBAAAAAEA/LQAAAAoLAAAACYsBAAAJjAEAAAoBQwEAADgBAAAAAEA/LQAAAAoLAAAACY0BAAAJjgEAAAoBRAEAADgBAAAAAEA/AAAAAAoLAAAACY8BAAAJkAEAAAoBRQEAADgBAAAAAEA/LQAAAAoLAAAACZEBAAAJkgEAAAoBRgEAADgBAAAAAEA/LQAAAAoLAAAACZMBAAAJlAEAAAoBRwEAADgBAAAAAEA/LQAAAAoLAAAACZUBAAAJlgEAAAoBSAEAADgBAAAAAEA/LQAAAAoLAAAACZcBAAAJmAEAAAoBSQEAADgBAAAAAEA/LQAAAAoLAAAACZkBAAAJmgEAAAoBSgEAADgBAAAAAEA/LQAAAAoLAAAACZsBAAAJnAEAAAoBSwEAADgBAAAAAEA/LQAAAAoLAAAACZ0BAAAJngEAAAoBTAEAADgBAAAAAEA/LQAAAAoLAAAACZ8BAAAJoAEAAAoBTQEAADgBAAAAAEA/KAAAAAoLAAAACaEBAAAJogEAAAoBTgEAADgBAAAAAEA/KAAAAAoLAAAACaMBAAAJpAEAAAoBTwEAADgBAAAAAEA/KAAAAAoLAAAACaUBAAAJpgEAAAoBUAEAADgBAAAAAEA/KAAAAAoLAAAACacBAAAJqAEAAAoBUQEAADgBAAAAAEA/KAAAAAoLAAAACakBAAAJqgEAAAoBUgEAADgBAAAAAEA/KAAAAAoLAAAACasBAAAJrAEAAAoBUwEAADgBAAAAAEA/KAAAAAoLAAAACa0BAAAJrgEAAAoBVAEAADgBAAAAAEA/KAAAAAoLAAAACa8BAAAJsAEAAAoBVQEAADgBAAAAAEA/KAAAAAoLAAAACbEBAAAJsgEAAAoBVgEAADgBAAAAAEA/KAAAAAoLAAAACbMBAAAJtAEAAAoBVwEAADgBAAAAAEA/KAAAAAoLAAAACbUBAAAJtgEAAAoBWAEAADgBAAAAAEA/KAAAAAoLAAAACbcBAAAJuAEAAAoBWQEAADgBAAAAAEA/KAAAAAoLAAAACbkBAAAJugEAAAoBWgEAADgBAAAAAEA/KAAAAAoLAAAACbsBAAAJvAEAAAoBWwEAADgBAAAAAEA/KAAAAAoLAAAACb0BAAAJvgEAAAoBXAEAADgBAAAAAEA/KAAAAAoLAAAACb8BAAAJwAEAAAoBXQEAADgBAAAAAEA/HgAAAAoLAAAACcEBAAAJwgEAAAoBXgEAADgBAAAAAEA/AAAAAAoLAAAACcMBAAAJxAEAAAoBXwEAADgBAAAAAEA/EgAAAAoLAAAACcUBAAAJxgEAAAoBYAEAADgBAAAAAEA/HgAAAAoLAAAACccBAAAJyAEAAAoBYQEAADgBAAAAAEA/BgAAAAoLAAAACckBAAAJygEAAAoBYgEAADgBAAAAAEA/BgAAAAoLAAAACcsBAAAJzAEAAAoBYwEAADgBAAAAAEA/BgAAAAoLAAAACc0BAAAJzgEAAAoBZAEAADgBAAAAAEA/BgAAAAoLAAAACc8BAAAJ0AEAAAoBZQEAADgBAAAAAEA/BgAAAAoLAAAACdEBAAAJ0gEAAAoBZgEAADgBAAAAAEA/BgAAAAoLAAAACdMBAAAJ1AEAAAoBZwEAADgBAAAAAEA/BgAAAAoLAAAACdUBAAAJ1gEAAAoBaAEAADgBAAAAAEA/BgAAAAoLAAAACdcBAAAJ2AEAAAoBaQEAADgBAAAAAEA/BgAAAAoLAAAACdkBAAAJ2gEAAAoBagEAADgBAAAAAEA/BgAAAAoLAAAACdsBAAAJ3AEAAAoBawEAADgBAAAAAEA/BgAAAAoLAAAACd0BAAAJ3gEAAAoBbAEAADgBAAAAAEA/BgAAAAoLAAAACd8BAAAJ4AEAAAoBbQEAADgBAAAAAEA/BgAAAAoLAAAACeEBAAAJ4gEAAAoBbgEAADgBAAAAAEA/BgAAAAoLAAAACeMBAAAJ5AEAAAoBbwEAADgBAAAAAEA/BgAAAAoLAAAACeUBAAAJ5gEAAAoBcAEAADgBAAAAAEA/BgAAAAoLAAAACecBAAAJ6AEAAAoBcQEAADgBAAAAAEA/BgAAAAoLAAAACekBAAAJ6gEAAAoBcgEAADgBAAAAAEA/AAAAAAoLAAAACesBAAAJ7AEAAAoBcwEAADgBAAAAAEA/AAAAAAoLAAAACe0BAAAJ7gEAAAoBdAEAADgBAAAAAEA/AAAAAAoLAAAACe8BAAAJ8AEAAAoBdQEAADgBAAAAAEA/AAAAAAoLAAAACfEBAAAJ8gEAAAoBdgEAADgBAAAAAEA/AAAAAAoLAAAACfMBAAAJ9AEAAAoQdwEAAAUAAAAG9QEAAAJFVAb2AQAACVBhaW50VHlwZQb3AQAAB1Byb2ZpbGUG+AEAAARTaXplBvkBAAAFV2lkdGgQeAEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQeQEAAAUAAAAJ9QEAAAn2AQAACfcBAAAJ+AEAAAn5AQAAEHoBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEHsBAAAFAAAACfUBAAAJ9gEAAAn3AQAACfgBAAAJ+QEAABB8AQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABB9AQAABQAAAAn1AQAACfYBAAAJ9wEAAAn4AQAACfkBAAAQfgEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQfwEAAAUAAAAJ9QEAAAn2AQAACfcBAAAJ+AEAAAn5AQAAEIABAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEIEBAAAFAAAACfUBAAAJ9gEAAAn3AQAACfgBAAAJ+QEAABCCAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABCDAQAAAAAAABCEAQAAAAAAABCFAQAAAAAAABCGAQAAAAAAABCHAQAAAAAAABCIAQAAAAAAABCJAQAAAAAAABCKAQAAAAAAABCLAQAABQAAAAb6AQAAAkVUBvsBAAAJUGFpbnRUeXBlBvwBAAAHUHJvZmlsZQb9AQAABFNpemUG/gEAAAVXaWR0aBCMAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABCNAQAABQAAAAn6AQAACfsBAAAJ/AEAAAn9AQAACf4BAAAQjgEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQjwEAAAAAAAAQkAEAAAAAAAAQkQEAAAUAAAAJ+gEAAAn7AQAACfwBAAAJ/QEAAAn+AQAAEJIBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEJMBAAAFAAAACfoBAAAJ+wEAAAn8AQAACf0BAAAJ/gEAABCUAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABCVAQAABQAAAAn6AQAACfsBAAAJ/AEAAAn9AQAACf4BAAAQlgEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQlwEAAAUAAAAJ+gEAAAn7AQAACfwBAAAJ/QEAAAn+AQAAEJgBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEJkBAAAFAAAACfoBAAAJ+wEAAAn8AQAACf0BAAAJ/gEAABCaAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABCbAQAABQAAAAn6AQAACfsBAAAJ/AEAAAn9AQAACf4BAAAQnAEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQnQEAAAUAAAAJ+gEAAAn7AQAACfwBAAAJ/QEAAAn+AQAAEJ4BAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEJ8BAAAFAAAACfoBAAAJ+wEAAAn8AQAACf0BAAAJ/gEAABCgAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABChAQAABQAAAAb/AQAAAkVUBgACAAAJUGFpbnRUeXBlBgECAAAHUHJvZmlsZQYCAgAABFNpemUGAwIAAAVXaWR0aBCiAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABCjAQAABQAAAAn/AQAACQACAAAJAQIAAAkCAgAACQMCAAAQpAEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQpQEAAAUAAAAJ/wEAAAkAAgAACQECAAAJAgIAAAkDAgAAEKYBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEKcBAAAFAAAACf8BAAAJAAIAAAkBAgAACQICAAAJAwIAABCoAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABCpAQAABQAAAAn/AQAACQACAAAJAQIAAAkCAgAACQMCAAAQqgEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQqwEAAAUAAAAJ/wEAAAkAAgAACQECAAAJAgIAAAkDAgAAEKwBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEK0BAAAFAAAACf8BAAAJAAIAAAkBAgAACQICAAAJAwIAABCuAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABCvAQAABQAAAAn/AQAACQACAAAJAQIAAAkCAgAACQMCAAAQsAEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQsQEAAAUAAAAJ/wEAAAkAAgAACQECAAAJAgIAAAkDAgAAELIBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAELMBAAAFAAAACf8BAAAJAAIAAAkBAgAACQICAAAJAwIAABC0AQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABC1AQAABQAAAAn/AQAACQACAAAJAQIAAAkCAgAACQMCAAAQtgEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQtwEAAAUAAAAJ/wEAAAkAAgAACQECAAAJAgIAAAkDAgAAELgBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAELkBAAAFAAAACf8BAAAJAAIAAAkBAgAACQICAAAJAwIAABC6AQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABC7AQAABQAAAAn/AQAACQACAAAJAQIAAAkCAgAACQMCAAAQvAEAAAUAAAAICwAAAAAICAEAAAAICBQAAAAICAwAAAAICIcAAAAQvQEAAAUAAAAJ/wEAAAkAAgAACQECAAAJAgIAAAkDAgAAEL4BAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEL8BAAAFAAAACf8BAAAJAAIAAAkBAgAACQICAAAJAwIAABDAAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABDBAQAABQAAAAYEAgAAAkVUBgUCAAAJUGFpbnRUeXBlBgYCAAAHUHJvZmlsZQYHAgAABFNpemUGCAIAAAVXaWR0aBDCAQAABQAAAAgLAAAAAAgIAQAAAAgIFAAAAAgIDAAAAAgIhwAAABDDAQAAAAAAABDEAQAAAAAAABDFAQAAAwAAAAYJAgAADkxpdmVyeVN0cmVuZ3RoCQUCAAAGCgIAAAZMaXZlcnkQxgEAAAMAAAAICwAAgD8ICAAAAAAGCwIAABhsaXZlcnlfc3BlY3RyZWZhc3RiYWNrXzIQxwEAAAUAAAAJBAIAAAkFAgAACQYCAAAJBwIAAAkIAgAAEMgBAAAFAAAACAsAAAAACAgBAAAACAgUAAAACAgMAAAACAiHAAAAEMkBAAADAAAABgwCAAAOTGl2ZXJ5U3RyZW5ndGgGDQIAAAlQYWludFR5cGUGDgIAAAZMaXZlcnkQygEAAAMAAAAICwAAgD8ICAAAAAAGDwIAAAAQywEAAAMAAAAJDAIAAAkNAgAACQ4CAAAQzAEAAAMAAAAICwAAgD8ICAAAAAAJDwIAABDNAQAAAwAAAAkMAgAACQ0CAAAJDgIAABDOAQAAAwAAAAgLAACAPwgIAAAAAAkPAgAAEM8BAAADAAAACQwCAAAJDQIAAAkOAgAAENABAAADAAAACAsAAIA/CAgAAAAACQ8CAAAQ0QEAAAMAAAAJDAIAAAkNAgAACQ4CAAAQ0gEAAAMAAAAICwAAgD8ICAAAAAAJDwIAABDTAQAAAwAAAAkMAgAACQ0CAAAJDgIAABDUAQAAAwAAAAgLAACAPwgIAAAAAAkPAgAAENUBAAADAAAACQwCAAAJDQIAAAkOAgAAENYBAAADAAAACAsAAIA/CAgAAAAACQ8CAAAQ1wEAAAMAAAAJDAIAAAkNAgAACQ4CAAAQ2AEAAAMAAAAICwAAgD8ICAAAAAAJDwIAABDZAQAAAwAAAAkMAgAACQ0CAAAJDgIAABDaAQAAAwAAAAgLAACAPwgIAAAAAAkPAgAAENsBAAADAAAACQwCAAAJDQIAAAkOAgAAENwBAAADAAAACAsAAIA/CAgAAAAACQ8CAAAQ3QEAAAMAAAAJDAIAAAkNAgAACQ4CAAAQ3gEAAAMAAAAICwAAgD8ICAAAAAAJDwIAABDfAQAAAwAAAAkMAgAACQ0CAAAJDgIAABDgAQAAAwAAAAgLAACAPwgIAAAAAAkPAgAAEOEBAAADAAAACQwCAAAJDQIAAAkOAgAAEOIBAAADAAAACAsAAIA/CAgAAAAACQ8CAAAQ4wEAAAMAAAAJDAIAAAkNAgAACQ4CAAAQ5AEAAAMAAAAICwAAgD8ICAAAAAAJDwIAABDlAQAAAwAAAAkMAgAACQ0CAAAJDgIAABDmAQAAAwAAAAgLAACAPwgIAAAAAAkPAgAAEOcBAAADAAAACQwCAAAJDQIAAAkOAgAAEOgBAAADAAAACAsAAIA/CAgAAAAACQ8CAAAQ6QEAAAMAAAAJDAIAAAkNAgAACQ4CAAAQ6gEAAAMAAAAICwAAgD8ICAAAAAAJDwIAABDrAQAAAAAAABDsAQAAAAAAABDtAQAAAAAAABDuAQAAAAAAABDvAQAAAAAAABDwAQAAAAAAABDxAQAAAAAAABDyAQAAAAAAABDzAQAAAAAAABD0AQAAAAAAAAs=","warehouse.dat":"AAEAAAD/////AQAAAAAAAAAMAgAAABRBc3NlbWJseS1Vbml0eVNjcmlwdAUBAAAADVdhcmVob3VzZURhdGEEAAAADXdhcmVob3VzZUxpc3QaYW1vdW50T2ZVbmxvY2tlZFdhcmVob3VzZXMSd2FyZWhvdXNlR3JvdXBMaXN0DndhcmVob3VzZU5hbWVzAwADBooBU3lzdGVtLkNvbGxlY3Rpb25zLkdlbmVyaWMuTGlzdGAxW1tMaXN0SW52ZW50b3J5SXRlbVdyYXBwZXIsIEFzc2VtYmx5LVVuaXR5U2NyaXB0LCBWZXJzaW9uPTAuMC4wLjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49bnVsbF1dCIYBU3lzdGVtLkNvbGxlY3Rpb25zLkdlbmVyaWMuTGlzdGAxW1tMaXN0R3JvdXBJdGVtV3JhcHBlciwgQXNzZW1ibHktVW5pdHlTY3JpcHQsIFZlcnNpb249MC4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1udWxsXV0CAAAACQMAAAABAAAACQQAAAAJBQAAAAQDAAAAigFTeXN0ZW0uQ29sbGVjdGlvbnMuR2VuZXJpYy5MaXN0YDFbW0xpc3RJbnZlbnRvcnlJdGVtV3JhcHBlciwgQXNzZW1ibHktVW5pdHlTY3JpcHQsIFZlcnNpb249MC4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1udWxsXV0DAAAABl9pdGVtcwVfc2l6ZQhfdmVyc2lvbgQAABpMaXN0SW52ZW50b3J5SXRlbVdyYXBwZXJbXQIAAAAICAkGAAAAAQAAAAEAAAAEBAAAAIYBU3lzdGVtLkNvbGxlY3Rpb25zLkdlbmVyaWMuTGlzdGAxW1tMaXN0R3JvdXBJdGVtV3JhcHBlciwgQXNzZW1ibHktVW5pdHlTY3JpcHQsIFZlcnNpb249MC4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1udWxsXV0DAAAABl9pdGVtcwVfc2l6ZQhfdmVyc2lvbgQAABZMaXN0R3JvdXBJdGVtV3JhcHBlcltdAgAAAAgICQcAAAABAAAAAQAAABEFAAAACAAAAAYIAAAAC1dhcmVob3VzZSAxBgkAAAALV2FyZWhvdXNlIDIGCgAAAAtXYXJlaG91c2UgMwYLAAAAC1dhcmVob3VzZSA0BgwAAAALV2FyZWhvdXNlIDUGDQAAAAtXYXJlaG91c2UgNgYOAAAAC1dhcmVob3VzZSA3Bg8AAAALV2FyZWhvdXNlIDgHBgAAAAABAAAABAAAAAQYTGlzdEludmVudG9yeUl0ZW1XcmFwcGVyAgAAAAkQAAAADQMHBwAAAAABAAAABAAAAAQUTGlzdEdyb3VwSXRlbVdyYXBwZXICAAAACREAAAANAwUQAAAAGExpc3RJbnZlbnRvcnlJdGVtV3JhcHBlcgEAAAAGbXlMaXN0A39TeXN0ZW0uQ29sbGVjdGlvbnMuR2VuZXJpYy5MaXN0YDFbW0ludmVudG9yeUl0ZW0sIEFzc2VtYmx5LVVuaXR5U2NyaXB0LCBWZXJzaW9uPTAuMC4wLjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49bnVsbF1dAgAAAAkSAAAABREAAAAUTGlzdEdyb3VwSXRlbVdyYXBwZXIBAAAABm15TGlzdAN7U3lzdGVtLkNvbGxlY3Rpb25zLkdlbmVyaWMuTGlzdGAxW1tHcm91cEl0ZW0sIEFzc2VtYmx5LVVuaXR5U2NyaXB0LCBWZXJzaW9uPTAuMC4wLjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49bnVsbF1dAgAAAAkTAAAABBIAAAB/U3lzdGVtLkNvbGxlY3Rpb25zLkdlbmVyaWMuTGlzdGAxW1tJbnZlbnRvcnlJdGVtLCBBc3NlbWJseS1Vbml0eVNjcmlwdCwgVmVyc2lvbj0wLjAuMC4wLCBDdWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPW51bGxdXQMAAAAGX2l0ZW1zBV9zaXplCF92ZXJzaW9uBAAAD0ludmVudG9yeUl0ZW1bXQIAAAAICAkUAAAAAAAAAAAAAAAEEwAAAHtTeXN0ZW0uQ29sbGVjdGlvbnMuR2VuZXJpYy5MaXN0YDFbW0dyb3VwSXRlbSwgQXNzZW1ibHktVW5pdHlTY3JpcHQsIFZlcnNpb249MC4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1udWxsXV0DAAAABl9pdGVtcwVfc2l6ZQhfdmVyc2lvbgQAAAtHcm91cEl0ZW1bXQIAAAAICAkVAAAAAAAAAAAAAAAHFAAAAAABAAAAAAAAAAQNSW52ZW50b3J5SXRlbQIAAAAHFQAAAAABAAAAAAAAAAQJR3JvdXBJdGVtAgAAAAs=","JobData.dat":"AAEAAAD/////AQAAAAAAAAAMAgAAABRBc3NlbWJseS1Vbml0eVNjcmlwdAUBAAAACEpvYnNEYXRhBgAAAARqb2JzDHNlbGVjdGVkSm9icw1uZXh0T3JkZXJUaW1lCm9yZGVyVGltZXIHTGFzdFVJZBJDdXJyZW50TWlzc2lvbkRvbmUDAwAAAAB8U3lzdGVtLkNvbGxlY3Rpb25zLkdlbmVyaWMuTGlzdGAxW1tKb2JXcmFwcGVyLCBBc3NlbWJseS1Vbml0eVNjcmlwdCwgVmVyc2lvbj0wLjAuMC4wLCBDdWx0dXJlPW5ldXRyYWwsIFB1YmxpY0tleVRva2VuPW51bGxdXXxTeXN0ZW0uQ29sbGVjdGlvbnMuR2VuZXJpYy5MaXN0YDFbW0pvYldyYXBwZXIsIEFzc2VtYmx5LVVuaXR5U2NyaXB0LCBWZXJzaW9uPTAuMC4wLjAsIEN1bHR1cmU9bmV1dHJhbCwgUHVibGljS2V5VG9rZW49bnVsbF1dCwsIAQIAAAAJAwAAAAkEAAAAAADwQRG40kCpAgAAAAQDAAAAfFN5c3RlbS5Db2xsZWN0aW9ucy5HZW5lcmljLkxpc3RgMVtbSm9iV3JhcHBlciwgQXNzZW1ibHktVW5pdHlTY3JpcHQsIFZlcnNpb249MC4wLjAuMCwgQ3VsdHVyZT1uZXV0cmFsLCBQdWJsaWNLZXlUb2tlbj1udWxsXV0DAAAABl9pdGVtcwVfc2l6ZQhfdmVyc2lvbgQAAAxKb2JXcmFwcGVyW10CAAAACAgJBQAAAAYAAAAGAAAAAQQAAAADAAAACQYAAAAAAAAAAAAAAAcFAAAAAAEAAAAIAAAABApKb2JXcmFwcGVyAgAAAAkHAAAACQgAAAAJCQAAAAkKAAAACQsAAAAJDAAAAAoKBwYAAAAAAQAAAAAAAAAECkpvYldyYXBwZXICAAAABQcAAAAKSm9iV3JhcHBlchMAAAACaWQLY2FyTG9hZGVySUQFZm9yWFAHY2FyRmlsZQ1jb25maWdWZXJzaW9uCGNhckNvbG9yCXRpbWVUb0VuZAdqb2JUeXBlCmpvYlN1YlR5cGUIam9iUGFydHMNam9iUGFydHNDb3VudAdNaWxlYWdlD2dsb2JhbENvbmRpdGlvbhNvdGhlclBhcnRzQ29uZGl0aW9uCkJvbnVzVG9F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","name.txt":"TGVY"};
+
+    const state = {
+      dirHandle: null,
+      folderName: "",
+      handles: {},
+      global: null,
+      upgrades: null,
+      inventory: null,
+      warehouse: null,
+      job: null
+    };
+
+    function $(id) { return document.getElementById(id); }
+
+    function setStatus(msg, kind) {
+      const el = $("status");
+      el.textContent = msg;
+      el.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function indexOfBytes(buf, needle, start) {
+      start = start || 0;
+      outer: for (let i = start; i <= buf.length - needle.length; i++) {
+        for (let j = 0; j < needle.length; j++) {
+          if (buf[i + j] !== needle[j]) continue outer;
+        }
+        return i;
+      }
+      return -1;
+    }
+
+    function readI32(buf, off) {
+      return buf[off] | (buf[off + 1] << 8) | (buf[off + 2] << 16) | (buf[off + 3] << 24);
+    }
+
+    function writeI32(buf, off, val) {
+      buf[off] = val & 255;
+      buf[off + 1] = (val >> 8) & 255;
+      buf[off + 2] = (val >> 16) & 255;
+      buf[off + 3] = (val >> 24) & 255;
+    }
+
+    function readF32(buf, off) {
+      const dv = new DataView(buf.buffer, buf.byteOffset + off, 4);
+      return dv.getFloat32(0, true);
+    }
+
+    function writeF32(buf, off, val) {
+      const dv = new DataView(buf.buffer, buf.byteOffset + off, 4);
+      dv.setFloat32(0, val, true);
+    }
+
+    function cloneBuf(buf) {
+      return new Uint8Array(buf);
+    }
+
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // CMS 2018 stores Polish/dev IDs — map to readable English labels.
+    const PART_PHRASES = [
+      ["kolektor_wydechowy", "Exhaust Manifold"],
+      ["kolektorWydechowy", "Exhaust Manifold"],
+      ["kolektor_dolotowy", "Intake Manifold"],
+      ["miska_olejowa", "Oil Pan"],
+      ["miskaOlejowa", "Oil Pan"],
+      ["walKorbowy", "Crankshaft"],
+      ["wal_korbowy", "Crankshaft"],
+      ["rolkaWalka", "Camshaft Sprocket / Roller"],
+      ["rolkaLancucha", "Timing Chain Roller"],
+      ["kolo_pasowe_walu", "Crankshaft Pulley"],
+      ["koloPasowe", "Pulley"],
+      ["oslona_rozrzadu", "Timing Cover"],
+      ["oslonaRozrzadu", "Timing Cover"],
+      ["glowica_dohc_wkladka", "DOHC Head Insert"],
+      ["glowica", "Cylinder Head"],
+      ["filtr_oleju", "Oil Filter"],
+      ["filtrOlej", "Oil Filter"],
+      ["pokrywaBeben", "Drum Brake Cover"],
+      ["pokrywa_beben", "Drum Brake Cover"],
+      ["szczekiCylinder", "Wheel Cylinder"],
+      ["szczeki", "Brake Shoes"],
+      ["zaciskHamulcowy", "Brake Caliper"],
+      ["zwrotnicaTylBeben_oslona", "Rear Drum Knuckle Cover"],
+      ["zwrotnicaPrzod_oslona", "Front Knuckle Cover"],
+      ["zwrotnicaTyl", "Rear Knuckle"],
+      ["zwrotnicaPrzod", "Front Knuckle"],
+      ["lacznikStabilizatoraPrzod", "Front Sway Bar Link"],
+      ["stabilizatorPrzod", "Front Sway Bar"],
+      ["amortyzatorPrzod", "Front Shock Absorber"],
+      ["amortyzatorTyl", "Rear Shock Absorber"],
+      ["wahaczDolny", "Lower Control Arm"],
+      ["wahaczGorny", "Upper Control Arm"],
+      ["polosNapedowaTylna", "Rear Drive Axle / Halfshaft"],
+      ["polosNapedowa", "Drive Axle / Halfshaft"],
+      ["kopulkaRozdzielacza", "Distributor Cap"],
+      ["pioraTyl", "Rear Wiper"],
+      ["pioraPrzod", "Front Wiper"],
+      ["rozrusznik", "Starter"],
+      ["popychacz", "Valve Lifter / Pushrod"],
+      ["tuleja", "Bushing"],
+      ["steering_wheel", "Steering Wheel"],
+      ["window_body_left", "Left Body Window"],
+      ["window_body_right", "Right Body Window"],
+      ["window_front", "Windshield"],
+      ["window_back", "Rear Window"],
+      ["headlight_left", "Left Headlight"],
+      ["headlight_right", "Right Headlight"],
+      ["taillight_left", "Left Taillight"],
+      ["taillight_right", "Right Taillight"],
+      ["fender_front_left", "Front Left Fender"],
+      ["fender_front_right", "Front Right Fender"],
+      ["fender_rear_left", "Rear Left Fender"],
+      ["fender_rear_right", "Rear Right Fender"],
+      ["door_front_left", "Front Left Door"],
+      ["door_front_right", "Front Right Door"],
+      ["door_rear_left", "Rear Left Door"],
+      ["door_rear_right", "Rear Right Door"],
+      ["bumper_front", "Front Bumper"],
+      ["bumper_rear", "Rear Bumper"],
+      ["mirror_left", "Left Mirror"],
+      ["mirror_right", "Right Mirror"],
+      ["hood", "Hood"],
+      ["trunk", "Trunk"],
+      ["seat_", "Seat"],
+      ["bench_", "Bench Seat"]
+    ];
+
+    const PART_TOKENS = {
+      i6_old: "I6 (Old)",
+      i6: "I6",
+      i4: "I4",
+      r4: "R4",
+      r6: "R6",
+      v8: "V8",
+      w_v8_poczatkowy: "V8 Starter Pipe / Front Exhaust Section",
+      w_v8_koncowy: "V8 End Pipe / Rear Exhaust Section",
+      w_v8: "V8 Exhaust Section",
+      blok: "Engine Block",
+      walek: "Camshaft",
+      pasek: "Belt",
+      pompa: "Pump",
+      chlodnica: "Radiator",
+      tlok: "Piston",
+      zawor: "Valve",
+      sprzeglo: "Clutch",
+      skrzynia: "Gearbox",
+      opona: "Tire",
+      felga: "Rim",
+      hamulec: "Brake",
+      tarcza: "Brake Disc",
+      klocki: "Brake Pads",
+      akumulator: "Battery",
+      alternator: "Alternator",
+      turbo: "Turbocharger",
+      katalizator: "Catalytic Converter",
+      tlumik: "Muffler",
+      rura: "Pipe",
+      filtr: "Filter",
+      olej: "Oil",
+      powietrze: "Air",
+      paliwo: "Fuel",
+      przod: "Front",
+      tyl: "Rear",
+      tylna: "Rear",
+      tylny: "Rear",
+      lewy: "Left",
+      prawy: "Right",
+      left: "Left",
+      right: "Right",
+      front: "Front",
+      rear: "Rear",
+      back: "Rear",
+      old: "Old",
+      leather: "Leather",
+      clone: ""
+    };
+
+    const CAR_NAMES = {
+      olsengrandclub: "Olsen Grand Club",
+      tempestmagnum: "Tempest Magnum",
+      dodgechallenger: "Dodge Challenger",
+      dodgecharger: "Dodge Charger",
+      royalecrown: "Royale Crown",
+      salemkieran: "Salem Kieran",
+      fmwpanther: "FMW Panther",
+      boltrollett: "Bolt Rollett",
+      spectrefastback: "Spectre Fastback"
+    };
+
+    function titleCaseWords(s) {
+      return s.replace(/(^|[_\-\s])([a-z])/g, (_, a, b) => (a === "_" || a === "-" ? " " : a) + b.toUpperCase())
+        .replace(/_/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function friendlyPartName(rawId) {
+      if (!rawId) return "Unknown part";
+      let id = String(rawId).replace(/\(Clone\)/gi, "").replace(/_+/g, "_");
+      const suffixMatch = id.match(/_(\d+)$/);
+      const variant = suffixMatch ? suffixMatch[1] : "";
+      if (suffixMatch) id = id.slice(0, -suffixMatch[0].length);
+
+      // Exact / phrase hits first
+      for (const [needle, label] of PART_PHRASES) {
+        if (id.toLowerCase().includes(needle.toLowerCase()) || id.includes(needle)) {
+          let prefix = "";
+          if (/^i6_old/i.test(id)) prefix = "I6 (Old) ";
+          else if (/^i6_/i.test(id)) prefix = "I6 ";
+          else if (/^i4_/i.test(id)) prefix = "I4 ";
+          else if (/^r6_/i.test(id)) prefix = "R6 ";
+          else if (/^r4_/i.test(id)) prefix = "R4 ";
+          else if (/^v8_/i.test(id)) prefix = "V8 ";
+          else if (/^w_v8/i.test(id)) prefix = "";
+          const out = (prefix + label).trim();
+          return variant ? out + " #" + variant : out;
+        }
+      }
+
+      // Special exhaust section IDs
+      if (/^w_v8_poczatkowy/i.test(id)) return "V8 Front Exhaust Section" + (id.includes("_h2") ? " (H2)" : "");
+      if (/^w_v8_koncowy/i.test(id)) return "V8 Rear Exhaust Section";
+      if (/^v8_blok$/i.test(id)) return "V8 Engine Block";
+      if (/^v8_popychacz$/i.test(id)) return "V8 Valve Lifter / Pushrod";
+      if (/^livery_/i.test(id)) {
+        const rest = id.replace(/^livery_/i, "").replace(/_/g, " ");
+        return "Livery: " + titleCaseWords(rest);
+      }
+
+      // car_<name>-<part>
+      const carMatch = id.match(/^car_([a-zA-Z0-9]+)-(.+)$/i);
+      if (carMatch) {
+        const car = CAR_NAMES[carMatch[1].toLowerCase()] || titleCaseWords(carMatch[1]);
+        let part = carMatch[2];
+        for (const [needle, label] of PART_PHRASES) {
+          if (part.toLowerCase().includes(needle.toLowerCase())) {
+            return car + " — " + label + (variant ? " #" + variant : "");
+          }
+        }
+        part = titleCaseWords(part.replace(/_/g, " "));
+        return car + " — " + part + (variant ? " #" + variant : "");
+      }
+
+      // seat / bench
+      if (/^seat_/i.test(id)) return "Seat" + (id.match(/leather/i) ? " (Leather)" : "") + (variant ? " #" + variant : "");
+      if (/^bench_/i.test(id)) {
+        const carBit = id.replace(/^bench_/i, "").replace(/_leather\d*$/i, "");
+        const car = CAR_NAMES[carBit.toLowerCase()] || titleCaseWords(carBit);
+        return "Bench Seat" + (car ? " (" + car + ")" : "");
+      }
+      if (/^steering_wheel/i.test(id)) return "Steering Wheel" + (id.match(/old/i) ? " (Old)" : "");
+
+      // Generic token walk
+      let work = id;
+      const chunks = [];
+      const keys = Object.keys(PART_TOKENS).sort((a, b) => b.length - a.length);
+      while (work.length) {
+        let hit = false;
+        for (const key of keys) {
+          if (work.toLowerCase().startsWith(key.toLowerCase())) {
+            if (PART_TOKENS[key]) chunks.push(PART_TOKENS[key]);
+            work = work.slice(key.length).replace(/^[_-]+/, "");
+            hit = true;
+            break;
+          }
+        }
+        if (!hit) {
+          const m = work.match(/^([A-Za-z0-9]+)/);
+          if (!m) break;
+          chunks.push(titleCaseWords(m[1]));
+          work = work.slice(m[1].length).replace(/^[_-]+/, "");
+        }
+      }
+      let label = chunks.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+      if (!label) label = titleCaseWords(rawId);
+      return variant ? label + " #" + variant : label;
+    }
+
+    function partLabelHtml(rawId) {
+      const nice = friendlyPartName(rawId);
+      return '<div class="part-name">' + escHtml(nice) + '</div>' +
+        '<div class="part-id" title="Internal save ID">' + escHtml(rawId) + "</div>";
+    }
+
+    function parseGlobalData(buf) {
+      const data = cloneBuf(buf);
+      const mi = indexOfBytes(data, GLOBAL_MARKER);
+      if (mi < 0) {
+        return {
+          buf: data,
+          fallback: true,
+          moneyOff: FALLBACK_MONEY,
+          levelOff: FALLBACK_LEVEL,
+          xpOff: FALLBACK_XP,
+          money: readI32(data, FALLBACK_MONEY),
+          level: readI32(data, FALLBACK_LEVEL),
+          xp: readI32(data, FALLBACK_XP),
+          shedsAvailable: 0,
+          shedsAvailOff: null,
+          missionsFinished: 0,
+          missionsOff: null,
+          currentMissionDone: 0,
+          missionDoneOff: null,
+          shedsVisible: [],
+          shedsVisDataOff: null
+        };
+      }
+
+      let p = mi + GLOBAL_MARKER.length + 4;
+      const moneyOff = p;
+      const money = readI32(data, p); p += 4;
+      const levelOff = p;
+      const level = readI32(data, p); p += 4;
+      const xpOff = p;
+      const xp = readI32(data, p); p += 4;
+      const shedsAvailOff = p;
+      const shedsAvailable = readI32(data, p); p += 4;
+
+      if (data[p] === 0x09) p += 5;
+
+      const missionsOff = p;
+      const missionsFinished = readI32(data, p); p += 4;
+      const missionDoneOff = p;
+      const currentMissionDone = data[p]; p += 1;
+
+      const shedsVisible = [];
+      let shedsVisDataOff = null;
+      if (data[p] === 0x0f) {
+        const arrLen = readI32(data, p + 5);
+        const primType = data[p + 9];
+        if (primType === 1 && arrLen > 0 && arrLen < 128) {
+          shedsVisDataOff = p + 10;
+          for (let i = 0; i < arrLen; i++) {
+            shedsVisible.push(data[shedsVisDataOff + i] ? 1 : 0);
+          }
+        }
+      }
+
+      return {
+        buf: data,
+        fallback: false,
+        moneyOff, levelOff, xpOff, shedsAvailOff, missionsOff, missionDoneOff, shedsVisDataOff,
+        money, level, xp, shedsAvailable, missionsFinished, currentMissionDone, shedsVisible
+      };
+    }
+
+    function patchGlobal(g) {
+      writeI32(g.buf, g.moneyOff, g.money | 0);
+      writeI32(g.buf, g.levelOff, g.level | 0);
+      writeI32(g.buf, g.xpOff, g.xp | 0);
+      if (g.shedsAvailOff != null) writeI32(g.buf, g.shedsAvailOff, g.shedsAvailable | 0);
+      if (g.missionsOff != null) writeI32(g.buf, g.missionsOff, g.missionsFinished | 0);
+      if (g.missionDoneOff != null) g.buf[g.missionDoneOff] = g.currentMissionDone ? 1 : 0;
+      if (g.shedsVisDataOff != null) {
+        for (let i = 0; i < g.shedsVisible.length; i++) {
+          g.buf[g.shedsVisDataOff + i] = g.shedsVisible[i] ? 1 : 0;
+        }
+      }
+    }
+
+    function parseUpgrades(buf) {
+      const data = cloneBuf(buf);
+      const arrays = [];
+      for (let i = 0; i < data.length - 14; i++) {
+        if (data[i] !== 0x0f) continue;
+        const len = readI32(data, i + 5);
+        const primType = data[i + 9];
+        if (primType !== 1 || len < 1 || len > 63) continue;
+        const dataOff = i + 10;
+        const bools = [];
+        for (let b = 0; b < len; b++) bools.push(data[dataOff + b] ? 1 : 0);
+        arrays.push({ recordOff: i, dataOff, len, bools });
+      }
+
+      const picked = arrays.slice(0, UPGRADE_IDS.length);
+      const upgrades = picked.map((arr, idx) => {
+        const id = UPGRADE_IDS[idx] || ("upgrade_" + (idx + 1));
+        return {
+          id,
+          label: UPGRADE_LABELS[id] || id.replace(/_/g, " "),
+          recordOff: arr.recordOff,
+          dataOff: arr.dataOff,
+          len: arr.len,
+          bools: arr.bools.slice(),
+          unlocked: arr.bools.every((v) => v === 1)
+        };
+      });
+
+      return { buf: data, upgrades };
+    }
+
+    function patchUpgrades(u) {
+      for (const up of u.upgrades) {
+        for (let i = 0; i < up.len; i++) {
+          u.buf[up.dataOff + i] = up.bools[i] ? 1 : 0;
+        }
+      }
+    }
+
+    function buildStringTable(buf) {
+      const strings = new Map();
+      for (let i = 0; i < buf.length - 6; i++) {
+        if (buf[i] !== 0x06) continue;
+        const id = readI32(buf, i + 1);
+        const len = buf[i + 5];
+        if (len <= 0 || len >= 120 || i + 6 + len > buf.length) continue;
+        let ok = true;
+        let s = "";
+        for (let j = 0; j < len; j++) {
+          const c = buf[i + 6 + j];
+          if (c < 32 || c > 126) { ok = false; break; }
+          s += String.fromCharCode(c);
+        }
+        if (ok) strings.set(id, s);
+      }
+      return strings;
+    }
+
+    function parseInventory(buf) {
+      const data = cloneBuf(buf);
+      const strings = buildStringTable(data);
+      const items = [];
+
+      for (let i = 0; i < data.length - 20; i++) {
+        if (data[i] !== 0x01 || readI32(data, i + 5) !== 5) continue;
+        let p = i + 9;
+        let ID;
+        if (data[p] === 0x06) {
+          const len = data[p + 5];
+          if (p + 6 + len > data.length) continue;
+          ID = "";
+          for (let j = 0; j < len; j++) ID += String.fromCharCode(data[p + 6 + j]);
+          p += 6 + len;
+        } else if (data[p] === 0x09) {
+          const ref = readI32(data, p + 1);
+          ID = strings.get(ref) || ("#" + ref);
+          p += 5;
+        } else continue;
+
+        if (p + 4 > data.length) continue;
+        const Index = readI32(data, p); p += 4;
+        if (p + 4 > data.length) continue;
+        const ConditionOff = p;
+        const Condition = readF32(data, p); p += 4;
+        if (!(Condition >= 0 && Condition <= 1.05)) continue;
+
+        if (data[p] === 0x09) p += 5;
+        else if (data[p] === 0x0a) p += 1;
+        else if (data[p] === 0x0f) {
+          const alen = readI32(data, p + 5);
+          const pt = data[p + 9];
+          p += 10 + (pt === 11 ? alen * 4 : alen);
+        } else continue;
+
+        if (data[p] === 0x09) p += 5;
+        else if (data[p] === 0x0a) p += 1;
+        else if (data[p] === 0x01) p += 13;
+        else continue;
+
+        if (p + 8 > data.length) continue;
+        p += 4;
+        const AmountOff = p;
+        const Amount = readI32(data, p); p += 4;
+        const IsExaminedOff = p;
+        const IsExamined = data[p];
+
+        items.push({
+          ID, Index, Condition, ConditionOff, Amount, AmountOff, IsExamined, IsExaminedOff
+        });
+      }
+
+      return { buf: data, items };
+    }
+
+    function patchInventory(inv) {
+      for (const it of inv.items) {
+        writeF32(inv.buf, it.ConditionOff, it.Condition);
+        writeI32(inv.buf, it.AmountOff, it.Amount | 0);
+        inv.buf[it.IsExaminedOff] = it.IsExamined ? 1 : 0;
+      }
+    }
+
+    function parseWarehouse(buf) {
+      const data = cloneBuf(buf);
+      let unlockedOff = null;
+      let unlocked = 1;
+
+      for (let i = 0; i < data.length - 20; i++) {
+        if (data[i] !== 0x11) continue;
+        const arrLen = readI32(data, i + 5);
+        if (arrLen !== 8) continue;
+        let slice = "";
+        for (let j = i; j < Math.min(data.length, i + 120); j++) {
+          const c = data[j];
+          if (c >= 32 && c <= 126) slice += String.fromCharCode(c);
+        }
+        if (slice.indexOf("Warehouse") >= 0) {
+          unlockedOff = i - 8;
+          unlocked = readI32(data, unlockedOff);
+          break;
+        }
+      }
+
+      return { buf: data, unlockedOff, unlocked: unlockedOff != null ? unlocked : 1 };
+    }
+
+    function patchWarehouse(w) {
+      if (w.unlockedOff != null) writeI32(w.buf, w.unlockedOff, w.unlocked | 0);
+    }
+
+    function skipJobString(data, posRef) {
+      const t = data[posRef.p];
+      if (t === 0x06) {
+        const len = data[posRef.p + 5];
+        posRef.p += 6 + len;
+        return true;
+      }
+      if (t === 0x09) { posRef.p += 5; return true; }
+      if (t === 0x0a) { posRef.p += 1; return true; }
+      return false;
+    }
+
+    function parseBoolField(data, posRef) {
+      const t = data[posRef.p];
+      if (t === 0x0f) {
+        const len = readI32(data, posRef.p + 5);
+        const primType = data[posRef.p + 9];
+        if (primType !== 1) return null;
+        const dataOff = posRef.p + 10;
+        const bools = [];
+        for (let i = 0; i < len; i++) bools.push(data[dataOff + i] ? 1 : 0);
+        posRef.p = dataOff + len;
+        return { kind: "array", dataOff, len, bools };
+      }
+      if (t === 0x0a) {
+        posRef.p += 1;
+        return { kind: "null" };
+      }
+      return null;
+    }
+
+    function parseJobData(buf) {
+      const data = cloneBuf(buf);
+      const jobs = [];
+      let partsFoundTotal = 0;
+
+      for (let i = 0; i < data.length - 30; i++) {
+        if (data[i] !== 0x01 || readI32(data, i + 5) !== 43) continue;
+        const pos = { p: i + 9 };
+        if (!skipJobString(data, pos) || !skipJobString(data, pos)) continue;
+        if (pos.p + 4 > data.length) continue;
+        const partsCount = readI32(data, pos.p); pos.p += 4;
+
+        if (data[pos.p] === 0x0a) pos.p += 1;
+        else if (data[pos.p] === 0x09) pos.p += 5;
+        else continue;
+
+        if (!skipJobString(data, pos)) continue;
+        if (pos.p >= data.length) continue;
+        pos.p += 1;
+
+        const doneOff = pos.p;
+        const done = data[pos.p] ? 1 : 0;
+        pos.p += 1;
+
+        const partDone = parseBoolField(data, pos);
+        const partFound = parseBoolField(data, pos);
+
+        if (partFound && partFound.kind === "array") {
+          partsFoundTotal += partFound.bools.filter((v) => v === 1).length;
+        }
+
+        jobs.push({
+          partsCount,
+          done,
+          doneOff,
+          partDone,
+          partFound
+        });
+      }
+
+      return { buf: data, jobs, partsFoundTotal };
+    }
+
+    function patchJobData(j) {
+      for (const job of j.jobs) {
+        j.buf[job.doneOff] = job.done ? 1 : 0;
+        if (job.partDone && job.partDone.kind === "array") {
+          for (let i = 0; i < job.partDone.len; i++) j.buf[job.partDone.dataOff + i] = 1;
+        }
+        if (job.partFound && job.partFound.kind === "array") {
+          for (let i = 0; i < job.partFound.len; i++) j.buf[job.partFound.dataOff + i] = 1;
+        }
+      }
+    }
+
+    function syncFromUI() {
+      if (state.global) {
+        state.global.money = parseInt($("money").value, 10) || 0;
+        state.global.level = parseInt($("level").value, 10) || 1;
+        state.global.xp = parseInt($("xp").value, 10) || 0;
+        if (!state.global.fallback) {
+          state.global.shedsAvailable = parseInt($("shedsAvailable").value, 10) || 0;
+          state.global.missionsFinished = parseInt($("missionsFinished").value, 10) || 0;
+          state.global.currentMissionDone = parseInt($("currentMissionDone").value, 10) ? 1 : 0;
+          const checks = $("shedChecks").querySelectorAll("input[type=checkbox]");
+          checks.forEach((cb, idx) => {
+            if (state.global.shedsVisible[idx] != null) {
+              state.global.shedsVisible[idx] = cb.checked ? 1 : 0;
+            }
+          });
+        }
+        patchGlobal(state.global);
+      }
+
+      if (state.upgrades) {
+        state.upgrades.upgrades.forEach((up, idx) => {
+          const cb = $("upg_" + idx);
+          if (!cb) return;
+          const on = cb.checked;
+          up.unlocked = on;
+          for (let i = 0; i < up.len; i++) up.bools[i] = on ? 1 : 0;
+        });
+        patchUpgrades(state.upgrades);
+      }
+
+      if (state.inventory) {
+        const rows = $("invTable").querySelectorAll("tbody tr");
+        rows.forEach((row, idx) => {
+          const it = state.inventory.items[idx];
+          if (!it) return;
+          const cond = parseFloat(row.querySelector(".inv-cond").value);
+          const amt = parseInt(row.querySelector(".inv-amt").value, 10);
+          const ex = row.querySelector(".inv-ex").checked;
+          it.Condition = isNaN(cond) ? it.Condition : Math.max(0, Math.min(1, cond));
+          it.Amount = isNaN(amt) ? it.Amount : amt;
+          it.IsExamined = ex ? 1 : 0;
+        });
+        patchInventory(state.inventory);
+      }
+
+      if (state.warehouse) {
+        state.warehouse.unlocked = Math.max(1, Math.min(8, parseInt($("warehousesUnlocked").value, 10) || 1));
+        patchWarehouse(state.warehouse);
+      }
+    }
+
+    function renderAll() {
+      const hasGlobal = !!state.global;
+      $("editorRoot").classList.toggle("hidden", !hasGlobal);
+      if (!hasGlobal) return;
+
+      $("money").value = state.global.money;
+      $("level").value = state.global.level;
+      $("xp").value = state.global.xp;
+
+      const hint = $("globalFallbackHint");
+      if (state.global.fallback) {
+        hint.textContent = "Marker not found - using Mod Manager fallback offsets for money/level/XP only. Barns and missions need a recognized GlobalData.dat.";
+        hint.classList.remove("hidden");
+        $("shedsAvailable").disabled = true;
+        $("missionsFinished").disabled = true;
+        $("currentMissionDone").disabled = true;
+        $("btnCompleteMissions").disabled = true;
+      } else {
+        hint.textContent = "";
+        hint.classList.add("hidden");
+        $("shedsAvailable").disabled = false;
+        $("missionsFinished").disabled = false;
+        $("currentMissionDone").disabled = false;
+        $("btnCompleteMissions").disabled = false;
+        $("shedsAvailable").value = state.global.shedsAvailable;
+        $("missionsFinished").value = state.global.missionsFinished;
+        $("currentMissionDone").value = String(state.global.currentMissionDone ? 1 : 0);
+        $("shedChecks").innerHTML = state.global.shedsVisible.map((v, i) =>
+          '<label class="chk"><input type="checkbox" data-shed="' + i + '"' + (v ? " checked" : "") + " /> Shed " + (i + 1) + "</label>"
+        ).join("");
+      }
+
+      if (state.upgrades) {
+        $("upgradeCount").textContent = state.upgrades.upgrades.length + " upgrades";
+        $("upgradeList").innerHTML = state.upgrades.upgrades.map((up, idx) =>
+          '<div class="upgrade-row">' +
+            '<input type="checkbox" id="upg_' + idx + '"' + (up.unlocked ? " checked" : "") + " />" +
+            '<label for="upg_' + idx + '">' + escHtml(up.label) + '</label>' +
+            '<span class="badge">' + escHtml(up.id) + " x" + up.len + "</span>" +
+          "</div>"
+        ).join("");
+      } else {
+        $("upgradeCount").textContent = "upgrades.dat not loaded";
+        $("upgradeList").innerHTML = '<p class="hint">No upgrades.dat in this folder.</p>';
+      }
+
+      if (state.inventory) {
+        $("invCount").textContent = state.inventory.items.length + " items";
+        $("invTable").querySelector("tbody").innerHTML = state.inventory.items.map((it, idx) =>
+          "<tr>" +
+            "<td>" + partLabelHtml(it.ID) + "</td>" +
+            '<td><input type="number" class="inv-cond" min="0" max="1" step="0.01" value="' + it.Condition.toFixed(2) + '" /></td>' +
+            '<td><input type="number" class="inv-amt" min="0" step="1" value="' + it.Amount + '" /></td>' +
+            '<td><input type="checkbox" class="inv-ex"' + (it.IsExamined ? " checked" : "") + " /></td>" +
+          "</tr>"
+        ).join("");
+      } else {
+        $("invCount").textContent = "inventory.dat not loaded";
+        $("invTable").querySelector("tbody").innerHTML = "";
+      }
+
+      if (state.warehouse) {
+        $("warehousesUnlocked").value = state.warehouse.unlocked;
+        $("warehousesUnlocked").disabled = state.warehouse.unlockedOff == null;
+        $("btnUnlockWarehouses").disabled = state.warehouse.unlockedOff == null;
+      } else {
+        $("warehousesUnlocked").value = 1;
+        $("warehousesUnlocked").disabled = true;
+        $("btnUnlockWarehouses").disabled = true;
+      }
+
+      if (state.job) {
+        const doneCount = state.job.jobs.filter((j) => j.done).length;
+        $("jobPartsSummary").textContent =
+          state.job.jobs.length + " job wrappers, " + doneCount + " marked done, " +
+          state.job.partsFoundTotal + " parts found (from bool arrays)";
+        $("btnMarkJobPartsDone").disabled = false;
+      } else {
+        $("jobPartsSummary").textContent = "JobData.dat not loaded";
+        $("btnMarkJobPartsDone").disabled = true;
+      }
+
+      const loaded = [];
+      if (state.global) loaded.push("GlobalData.dat");
+      if (state.upgrades) loaded.push("upgrades.dat");
+      if (state.inventory) loaded.push("inventory.dat");
+      if (state.warehouse) loaded.push("warehouse.dat");
+      if (state.job) loaded.push("JobData.dat");
+
+      $("folderMeta").innerHTML =
+        "<div><b>Folder:</b> " + escHtml(state.folderName) + "</div>" +
+        "<div><b>Loaded:</b> " + escHtml(loaded.join(", ")) + "</div>";
+
+      updateSaveButtons();
+    }
+
+    function updateSaveButtons() {
+      const canSave = !!state.global;
+      $("btnSaveFolder").disabled = !canSave || !state.dirHandle;
+      $("btnDownloadZip").disabled = !canSave;
+      $("btnDlGlobal").disabled = !state.global;
+      $("btnDlUpgrades").disabled = !state.upgrades;
+      $("btnDlInventory").disabled = !state.inventory;
+      $("btnDlWarehouse").disabled = !state.warehouse;
+      $("btnDlJob").disabled = !state.job;
+    }
+
+    function maxCharacter() {
+      if (!state.global) return;
+      state.global.money = 999999999;
+      state.global.level = 50;
+      state.global.xp = 999999;
+      patchGlobal(state.global);
+      renderAll();
+      setStatus("Character maxed.", "ok");
+    }
+
+    function unlockAllUpgrades() {
+      if (!state.upgrades) return;
+      for (const up of state.upgrades.upgrades) {
+        up.unlocked = true;
+        for (let i = 0; i < up.len; i++) up.bools[i] = 1;
+      }
+      patchUpgrades(state.upgrades);
+      renderAll();
+      setStatus("All upgrades unlocked.", "ok");
+    }
+
+    function completeMissions() {
+      if (!state.global || state.global.fallback) return;
+      state.global.missionsFinished = Math.max(state.global.missionsFinished, 999);
+      state.global.currentMissionDone = 1;
+      for (let i = 0; i < state.global.shedsVisible.length; i++) {
+        state.global.shedsVisible[i] = 1;
+      }
+      state.global.shedsAvailable = Math.max(state.global.shedsAvailable, state.global.shedsVisible.length);
+      patchGlobal(state.global);
+      renderAll();
+      setStatus("Missions and sheds marked complete.", "ok");
+    }
+
+    function maxInventoryCondition() {
+      if (!state.inventory) return;
+      for (const it of state.inventory.items) it.Condition = 1.0;
+      patchInventory(state.inventory);
+      renderAll();
+      setStatus("All item conditions set to 1.0.", "ok");
+    }
+
+    function maxInventoryAmounts() {
+      if (!state.inventory) return;
+      for (const it of state.inventory.items) it.Amount = 999;
+      patchInventory(state.inventory);
+      renderAll();
+      setStatus("All item amounts set to 999.", "ok");
+    }
+
+    function examineAllInventory() {
+      if (!state.inventory) return;
+      for (const it of state.inventory.items) it.IsExamined = 1;
+      patchInventory(state.inventory);
+      renderAll();
+      setStatus("All items marked examined.", "ok");
+    }
+
+    function unlockAllWarehouses() {
+      if (!state.warehouse || state.warehouse.unlockedOff == null) return;
+      state.warehouse.unlocked = 8;
+      patchWarehouse(state.warehouse);
+      renderAll();
+      setStatus("All 8 warehouses unlocked.", "ok");
+    }
+
+    function markAllJobPartsDone() {
+      if (!state.job) return;
+      for (const job of state.job.jobs) {
+        job.done = 1;
+        if (job.partDone && job.partDone.kind === "array") {
+          for (let i = 0; i < job.partDone.len; i++) job.partDone.bools[i] = 1;
+        }
+        if (job.partFound && job.partFound.kind === "array") {
+          for (let i = 0; i < job.partFound.len; i++) job.partFound.bools[i] = 1;
+        }
+      }
+      patchJobData(state.job);
+      renderAll();
+      setStatus("All job parts marked done.", "ok");
+    }
+
+    function resetToFolderPicker() {
+      state.dirHandle = null;
+      state.folderName = "";
+      state.handles = {};
+      state.global = null;
+      state.upgrades = null;
+      state.inventory = null;
+      state.warehouse = null;
+      state.job = null;
+      $("editorRoot").classList.add("hidden");
+      $("folderPanel").classList.remove("hidden");
+      $("folderInput").value = "";
+      setStatus("Waiting for a folder...");
+    }
+
+    
+    function b64ToU8(b64) {
+      const bin = atob(b64);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    function loadDemoSave() {
+      try {
+        state.dirHandle = null;
+        state.handles = {};
+        state.folderName = "Demo Profile (sample)";
+        state.global = parseGlobalData(b64ToU8(DEMO_SAVE["GlobalData.dat"]));
+        state.upgrades = parseUpgrades(b64ToU8(DEMO_SAVE["upgrades.dat"]));
+        state.inventory = parseInventory(b64ToU8(DEMO_SAVE["inventory.dat"]));
+        state.warehouse = parseWarehouse(b64ToU8(DEMO_SAVE["warehouse.dat"]));
+        state.job = parseJobData(b64ToU8(DEMO_SAVE["JobData.dat"]));
+        $("folderPanel").classList.add("hidden");
+        renderAll();
+        setStatus("Loaded demo save (~1M money, level 49). Use downloads/zip to export — Save to folder needs a real profile.", "ok");
+      } catch (e) {
+        setStatus("Demo load failed: " + e.message, "err");
+        console.error(e);
+      }
+    }
+
+    async function loadBufferFromFile(file) {
+      const ab = await file.arrayBuffer();
+      return new Uint8Array(ab);
+    }
+
+    async function loadFromDirectoryHandle(dirHandle) {
+      state.dirHandle = dirHandle;
+      state.folderName = dirHandle.name;
+      state.handles = {};
+      state.global = null;
+      state.upgrades = null;
+      state.inventory = null;
+      state.warehouse = null;
+      state.job = null;
+
+      let hasGlobal = false;
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind !== "file") continue;
+        const lower = name.toLowerCase();
+        const spec = SAVE_FILES.find((f) => f.name.toLowerCase() === lower);
+        if (!spec) continue;
+        const file = await handle.getFile();
+        const buf = await loadBufferFromFile(file);
+        state.handles[spec.key] = handle;
+        if (spec.key === "global") { state.global = parseGlobalData(buf); hasGlobal = true; }
+        else if (spec.key === "upgrades") state.upgrades = parseUpgrades(buf);
+        else if (spec.key === "inventory") state.inventory = parseInventory(buf);
+        else if (spec.key === "warehouse") state.warehouse = parseWarehouse(buf);
+        else if (spec.key === "job") state.job = parseJobData(buf);
+      }
+
+      if (!hasGlobal) throw new Error("GlobalData.dat is required in the selected folder.");
+      $("folderPanel").classList.add("hidden");
+      renderAll();
+      setStatus("Loaded save from " + dirHandle.name + ".", "ok");
+    }
+
+    async function loadFromFileList(fileList) {
+      const files = [...fileList];
+      state.dirHandle = null;
+      state.handles = {};
+      state.global = null;
+      state.upgrades = null;
+      state.inventory = null;
+      state.warehouse = null;
+      state.job = null;
+
+      let folderName = "";
+      let hasGlobal = false;
+
+      for (const file of files) {
+        const parts = (file.webkitRelativePath || file.name).split(/[/\\]/);
+        const base = parts[parts.length - 1];
+        if (!folderName && file.webkitRelativePath) folderName = parts[0] || "";
+        if (file.webkitRelativePath && parts.length > 2) continue;
+
+        const lower = base.toLowerCase();
+        const spec = SAVE_FILES.find((f) => f.name.toLowerCase() === lower);
+        if (!spec) continue;
+
+        const buf = await loadBufferFromFile(file);
+        if (spec.key === "global") { state.global = parseGlobalData(buf); hasGlobal = true; }
+        else if (spec.key === "upgrades") state.upgrades = parseUpgrades(buf);
+        else if (spec.key === "inventory") state.inventory = parseInventory(buf);
+        else if (spec.key === "warehouse") state.warehouse = parseWarehouse(buf);
+        else if (spec.key === "job") state.job = parseJobData(buf);
+      }
+
+      state.folderName = folderName || "selected folder";
+      if (!hasGlobal) throw new Error("GlobalData.dat is required in the selected folder.");
+      $("folderPanel").classList.add("hidden");
+      renderAll();
+      setStatus("Loaded save from folder (download-only mode - use individual downloads or zip).", "ok");
+    }
+
+    async function pickFolder() {
+      try {
+        if (window.showDirectoryPicker) {
+          try {
+            const dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+            await loadFromDirectoryHandle(dirHandle);
+            return;
+          } catch (e) {
+            if (e && e.name === "AbortError") return;
+            const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+            await loadFromDirectoryHandle(dirHandle);
+            return;
+          }
+        }
+        $("folderInput").click();
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+        setStatus("Folder picker unavailable - using fallback.", "err");
+        $("folderInput").click();
+      }
+    }
+
+    function downloadBlob(name, buf) {
+      const blob = new Blob([buf], { type: "application/octet-stream" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    const CRC_TABLE = (function () {
+      const t = new Uint32Array(256);
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        t[i] = c >>> 0;
+      }
+      return t;
+    })();
+
+    function crc32(buf) {
+      let c = 0xFFFFFFFF;
+      for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 255] ^ (c >>> 8);
+      return (c ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    function u16(n) { return [n & 255, (n >> 8) & 255]; }
+    function u32(n) { return [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >> 24) & 255]; }
+
+    function createZip(entries) {
+      const parts = [];
+      const central = [];
+      let offset = 0;
+
+      for (const ent of entries) {
+        const nameBytes = new TextEncoder().encode(ent.name);
+        const data = ent.data;
+        const crc = crc32(data);
+        const local = new Uint8Array([
+          0x50, 0x4b, 0x03, 0x04, 20, 0, 0, 0, 0, 0,
+          ...u16(0), ...u32(crc), ...u32(data.length), ...u32(data.length),
+          ...u16(nameBytes.length), 0, ...nameBytes, ...data
+        ]);
+        parts.push(local);
+        const centralHeader = new Uint8Array([
+          0x50, 0x4b, 0x01, 0x02, 20, 0, 20, 0, 0, 0, 0, 0,
+          ...u16(0), ...u32(crc), ...u32(data.length), ...u32(data.length),
+          ...u16(nameBytes.length), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          ...u32(offset), ...nameBytes
+        ]);
+        central.push(centralHeader);
+        offset += local.length;
+      }
+
+      const centralSize = central.reduce((s, c) => s + c.length, 0);
+      const end = new Uint8Array([
+        0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0,
+        ...u16(entries.length), ...u16(entries.length),
+        ...u32(centralSize), ...u32(offset), 0, 0
+      ]);
+
+      const totalLen = parts.reduce((s, p) => s + p.length, 0) + centralSize + end.length;
+      const out = new Uint8Array(totalLen);
+      let pos = 0;
+      for (const p of parts) { out.set(p, pos); pos += p.length; }
+      for (const c of central) { out.set(c, pos); pos += c.length; }
+      out.set(end, pos);
+      return out;
+    }
+
+    function collectSaveEntries() {
+      syncFromUI();
+      const entries = [];
+      if (state.global) entries.push({ name: "GlobalData.dat", data: state.global.buf });
+      if (state.upgrades) entries.push({ name: "upgrades.dat", data: state.upgrades.buf });
+      if (state.inventory) entries.push({ name: "inventory.dat", data: state.inventory.buf });
+      if (state.warehouse) entries.push({ name: "warehouse.dat", data: state.warehouse.buf });
+      if (state.job) entries.push({ name: "JobData.dat", data: state.job.buf });
+      return entries;
+    }
+
+    async function saveBackToFolder() {
+      try {
+        syncFromUI();
+        if (!state.dirHandle) throw new Error("No folder handle - use Download instead");
+        const writes = [];
+        if (state.global) {
+          writes.push(async () => {
+            const handle = state.handles.global || await state.dirHandle.getFileHandle("GlobalData.dat", { create: true });
+            const w = await handle.createWritable();
+            await w.write(state.global.buf);
+            await w.close();
+            state.handles.global = handle;
+          });
+        }
+        if (state.upgrades) {
+          writes.push(async () => {
+            const handle = state.handles.upgrades || await state.dirHandle.getFileHandle("upgrades.dat", { create: true });
+            const w = await handle.createWritable();
+            await w.write(state.upgrades.buf);
+            await w.close();
+            state.handles.upgrades = handle;
+          });
+        }
+        if (state.inventory) {
+          writes.push(async () => {
+            const handle = state.handles.inventory || await state.dirHandle.getFileHandle("inventory.dat", { create: true });
+            const w = await handle.createWritable();
+            await w.write(state.inventory.buf);
+            await w.close();
+            state.handles.inventory = handle;
+          });
+        }
+        if (state.warehouse) {
+          writes.push(async () => {
+            const handle = state.handles.warehouse || await state.dirHandle.getFileHandle("warehouse.dat", { create: true });
+            const w = await handle.createWritable();
+            await w.write(state.warehouse.buf);
+            await w.close();
+            state.handles.warehouse = handle;
+          });
+        }
+        if (state.job) {
+          writes.push(async () => {
+            const handle = state.handles.job || await state.dirHandle.getFileHandle("JobData.dat", { create: true });
+            const w = await handle.createWritable();
+            await w.write(state.job.buf);
+            await w.close();
+            state.handles.job = handle;
+          });
+        }
+        for (const fn of writes) await fn();
+        setStatus("Saved! Files written to your Profile folder.", "ok");
+      } catch (e) {
+        setStatus("Could not save to folder: " + e.message + " - use Download instead.", "err");
+      }
+    }
+
+    function downloadZip() {
+      try {
+        const entries = collectSaveEntries();
+        if (!entries.length) return;
+        const zip = createZip(entries);
+        downloadBlob((state.folderName || "cms2018-save") + ".zip", zip);
+        setStatus("Zip download ready - extract into your Profile folder.", "ok");
+      } catch (e) {
+        setStatus("Zip download failed: " + e.message, "err");
+      }
+    }
+
+    function downloadSingle(key, name) {
+      try {
+        syncFromUI();
+        const map = {
+          global: state.global,
+          upgrades: state.upgrades,
+          inventory: state.inventory,
+          warehouse: state.warehouse,
+          job: state.job
+        };
+        const obj = map[key];
+        if (!obj) return;
+        downloadBlob(name, obj.buf);
+        setStatus("Downloaded " + name + ".", "ok");
+      } catch (e) {
+        setStatus("Download failed: " + e.message, "err");
+      }
+    }
+
+    const drop = $("drop");
+    const folderInput = $("folderInput");
+
+    drop.addEventListener("click", () => pickFolder());
+    drop.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickFolder(); }
+    });
+    folderInput.addEventListener("change", async () => {
+      try {
+        if (!folderInput.files || !folderInput.files.length) return;
+        await loadFromFileList(folderInput.files);
+      } catch (e) {
+        setStatus("Could not open that folder: " + e.message, "err");
+        console.error(e);
+      }
+    });
+
+    $("tabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab");
+      if (!btn) return;
+      document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === btn));
+      document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + btn.dataset.tab));
+    });
+
+    $("btnSaveFolder").addEventListener("click", () => saveBackToFolder());
+    $("btnDownloadZip").addEventListener("click", () => downloadZip());
+    $("btnDlGlobal").addEventListener("click", () => downloadSingle("global", "GlobalData.dat"));
+    $("btnDlUpgrades").addEventListener("click", () => downloadSingle("upgrades", "upgrades.dat"));
+    $("btnDlInventory").addEventListener("click", () => downloadSingle("inventory", "inventory.dat"));
+    $("btnDlWarehouse").addEventListener("click", () => downloadSingle("warehouse", "warehouse.dat"));
+    $("btnDlJob").addEventListener("click", () => downloadSingle("job", "JobData.dat"));
+    $("btnChangeFolder").addEventListener("click", () => resetToFolderPicker());
+    $("btnLoadDemo").addEventListener("click", () => loadDemoSave());
+
+    $("btnMaxCharacter").addEventListener("click", () => { syncFromUI(); maxCharacter(); });
+    $("btnUnlockAllUpgrades").addEventListener("click", () => { syncFromUI(); unlockAllUpgrades(); });
+    $("btnCompleteMissions").addEventListener("click", () => { syncFromUI(); completeMissions(); });
+    $("btnMaxCondition").addEventListener("click", () => { syncFromUI(); maxInventoryCondition(); });
+    $("btnMaxAmounts").addEventListener("click", () => { syncFromUI(); maxInventoryAmounts(); });
+    $("btnExamineAll").addEventListener("click", () => { syncFromUI(); examineAllInventory(); });
+    $("btnUnlockWarehouses").addEventListener("click", () => { syncFromUI(); unlockAllWarehouses(); });
+    $("btnMarkJobPartsDone").addEventListener("click", () => { syncFromUI(); markAllJobPartsDone(); });
+  })();
+  </script>
+</body>
+</html>
