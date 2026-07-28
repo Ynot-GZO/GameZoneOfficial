@@ -193,7 +193,7 @@
       </div>
       <div class="path">%AppData%\LocalLow\Red Dot Games\Car Mechanic Simulator 2021\Saves\</div>
     </div>
-    <div class="status" id="status">Opening folder picker...</div>
+    <div class="status" id="status">Select your Saves folder to begin...</div>
 
     <div id="editorRoot" class="hidden">
       <div class="toolbar">
@@ -1510,20 +1510,36 @@ var CMS21 = {
             setStatus("Folder selection cancelled. Click the panel to try again.", "");
             return;
           }
-          const dirHandle = await window.showDirectoryPicker({ mode: "read" });
-          await loadFromDirectoryHandle(dirHandle);
-          return;
+          // SecurityError = not from a user click, or permission denied — fall through to file input
+          if (e && (e.name === "SecurityError" || e.name === "NotAllowedError")) {
+            $("folderInput").click();
+            setStatus("Select your Saves folder (profile*.cms21b)...", "");
+            return;
+          }
+          try {
+            const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+            await loadFromDirectoryHandle(dirHandle);
+            return;
+          } catch (e2) {
+            if (e2 && e2.name === "AbortError") {
+              setStatus("Folder selection cancelled. Click the panel to try again.", "");
+              return;
+            }
+            $("folderInput").click();
+            setStatus("Select your Saves folder (profile*.cms21b)...", "");
+            return;
+          }
         }
       }
       $("folderInput").click();
-      setStatus("Select your Saves folder to begin...");
+      setStatus("Select your Saves folder to begin...", "");
     } catch (e) {
       if (e && e.name === "AbortError") {
         setStatus("Folder selection cancelled. Click the panel to try again.", "");
         return;
       }
-      setStatus("Folder picker unavailable — use the file input fallback.", "err");
-      $("folderInput").click();
+      setStatus("Click the panel and choose your Saves folder.", "err");
+      try { $("folderInput").click(); } catch (_) {}
     }
   }
 
@@ -1564,7 +1580,7 @@ var CMS21 = {
   $("btnMaxCondition").addEventListener("click", () => { syncFromUI(); maxPartCondition(); });
   $("btnMaxQuality").addEventListener("click", () => { syncFromUI(); maxPartQuality(); });
 
-  pickFolder();
+  // Do not auto-open the folder picker — browsers block it unless the user clicks.
 })();
 
   </script>
