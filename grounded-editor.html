@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GZO - Grounded Save Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #101214;
+      --bg2: #171a1d;
+      --panel: #1c2126;
+      --panel2: #232a31;
+      --line: #323b45;
+      --text: #eef2f6;
+      --muted: #9aa6b2;
+      --accent: #f0a04b;
+      --accent2: #8ea8c3;
+      --danger: #ef7a6d;
+      --ok: #7cb87a;
+      --radius: 12px;
+      --font: "DM Sans", system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(ellipse 70% 45% at 50% -10%, rgba(240, 160, 75, 0.1), transparent 55%),
+        radial-gradient(ellipse 50% 35% at 90% 20%, rgba(142, 168, 195, 0.06), transparent 50%),
+        linear-gradient(180deg, #14181c 0%, var(--bg) 100%);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 1.25rem 1.2rem 3rem; }
+    .site-back-link {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      margin-bottom: 14px; text-decoration: none; font-weight: 600; font-size: 0.92rem;
+      color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+      background: var(--panel); padding: 7px 14px;
+    }
+    .site-back-link:hover { color: var(--text); border-color: var(--accent); }
+    .topbar { margin-bottom: 1.1rem; }
+    .brand h1 {
+      margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700;
+      letter-spacing: -0.02em; color: var(--text);
+    }
+    .brand h1 span { color: var(--accent); }
+    .btn {
+      appearance: none; border: 1px solid var(--line); background: var(--panel2);
+      color: var(--text); border-radius: 9px; padding: 0.55rem 0.9rem; font: inherit; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+    }
+    .btn:hover { border-color: #4a5663; background: #2a323b; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: rgba(240, 160, 75, 0.14); border-color: rgba(240, 160, 75, 0.45); color: #ffe8cc; }
+    .btn-ok { border-color: rgba(124, 184, 122, 0.4); color: #d8ffe0; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 1.05rem 1.15rem; margin-bottom: 1rem;
+    }
+    .drop {
+      position: relative; overflow: hidden;
+      border: 1.5px dashed #3d4854; border-radius: var(--radius);
+      padding: 1.6rem 1.1rem; text-align: center; background: rgba(0,0,0,0.18); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop:hover, .drop.drag { border-color: var(--accent); background: rgba(240, 160, 75, 0.06); }
+    .drop strong { display: block; color: var(--accent); font-size: 1.05rem; margin-bottom: 0.4rem; pointer-events: none; }
+    .drop .sub { color: var(--muted); font-size: 0.92rem; line-height: 1.45; pointer-events: none; }
+    /* Full-area file input so a click always opens a folder dialog (user-gesture safe). */
+    .drop input#folderInput {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; cursor: pointer; display: block; font-size: 0; border: 0; margin: 0; padding: 0;
+    }
+    .steps {
+      margin-top: 1rem; display: grid; gap: 0.55rem;
+      color: var(--muted); font-size: 0.9rem; line-height: 1.45;
+    }
+    .steps div { padding-left: 0.1rem; }
+    .steps b { color: var(--text); font-weight: 600; }
+    .path {
+      margin-top: 0.85rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+      background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 0.65rem 0.75rem;
+      word-break: break-all;
+    }
+    .meta { display: grid; gap: 0.3rem; font-size: 0.88rem; color: var(--muted); }
+    .meta b { color: var(--text); font-weight: 600; }
+    .status { margin: 0.65rem 0 1rem; font-size: 0.92rem; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--danger); }
+    .tabs {
+      display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.9rem;
+      padding: 0.3rem; background: var(--bg2); border: 1px solid var(--line); border-radius: 999px;
+    }
+    .tab {
+      border: 0; background: transparent; color: var(--muted);
+      border-radius: 999px; padding: 0.45rem 0.95rem; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: #1a1208; background: var(--accent); }
+    .view { display: none; }
+    .view.active { display: block; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.28rem; font-weight: 500; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 0.75rem; }
+    input[type="number"], input[type="text"], select {
+      width: 100%; border: 1px solid var(--line); background: var(--bg2); color: var(--text);
+      border-radius: 8px; padding: 0.55rem 0.65rem; font: inherit;
+    }
+    input:focus, select:focus { outline: 2px solid rgba(240, 160, 75, 0.35); border-color: var(--accent); }
+    .hint { color: var(--muted); font-size: 0.88rem; margin: 0 0 0.85rem; line-height: 1.45; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem;
+      padding: 0.75rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    }
+    .grid-checks {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.3rem;
+      max-height: 420px; overflow: auto; padding: 0.45rem; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--bg2);
+    }
+    .chk { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.4rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+    .chk:hover { background: rgba(255,255,255,0.04); }
+    .chk input { accent-color: var(--accent); flex-shrink: 0; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th, .data-table td { border-bottom: 1px solid var(--line); padding: 0.45rem 0.4rem; text-align: left; }
+    .data-table th { color: var(--muted); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: var(--panel); }
+    .data-table input[type="number"], .data-table input[type="text"] { min-width: 0; padding: 0.35rem 0.45rem; font-size: 0.85rem; }
+    .table-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
+    .section {
+      border: 1px solid var(--line); border-radius: 10px; background: var(--bg2);
+      padding: 0.9rem 0.95rem; margin-bottom: 0.85rem;
+    }
+    .section:last-child { margin-bottom: 0; }
+    .section-title {
+      margin: 0 0 0.7rem; font-size: 0.95rem; font-weight: 700; color: var(--accent2);
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .section-title span { color: var(--muted); font-weight: 500; font-size: 0.82rem; }
+    .upgrade-row {
+      display: flex; align-items: center; gap: 0.55rem; padding: 0.45rem 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; flex-wrap: wrap;
+    }
+    .upgrade-row:last-child { border-bottom: 0; }
+    .upgrade-row label { margin: 0; min-width: 160px; color: var(--text); font-size: 0.88rem; }
+    .badge {
+      font-size: 0.72rem; font-family: var(--mono); color: var(--muted);
+      background: rgba(0,0,0,0.25); border-radius: 4px; padding: 0.15rem 0.35rem;
+    }
+    .hidden { display: none !important; }
+    .created-by {
+      margin: 0.4rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .created-by strong { color: var(--text); font-weight: 600; }
+    .created-by a { color: var(--accent); font-weight: 700; text-decoration: underline; }
+    .created-by a:hover { color: #fff; }
+    .select-row { margin-bottom: 0.85rem; max-width: 100%; }
+    .footer-note {
+      margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line);
+      font-size: 0.78rem; color: var(--muted); line-height: 1.45;
+    }
+    .molar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.65rem; }
+    .molar-card {
+      border: 1px solid var(--line); border-radius: 8px; padding: 0.65rem 0.75rem;
+      background: rgba(0,0,0,0.15);
+    }
+    .molar-card .name { font-weight: 600; font-size: 0.88rem; margin-bottom: 0.35rem; }
+    .world-list { display: grid; gap: 0.4rem; max-height: 200px; overflow: auto; margin-bottom: 0.75rem; }
+    .world-pick {
+      text-align: left; width: 100%; border: 1px solid var(--line); background: var(--bg2);
+      color: var(--text); border-radius: 8px; padding: 0.55rem 0.7rem; font: inherit; cursor: pointer;
+    }
+    .world-pick:hover { border-color: var(--accent); }
+    .world-pick.active { border-color: var(--accent); background: rgba(240,160,75,0.1); }
+    .world-pick small { display: block; color: var(--muted); font-family: var(--mono); font-size: 0.72rem; margin-top: 0.15rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="site-back-link" href="index.html">Back to GZO editors</a>
+    <div class="topbar">
+      <div class="brand">
+        <h1>Grounded <span>Save Editor</span></h1>
+        <p class="created-by">Created by <strong>Ynot</strong> — Have any questions or need help? Click the link to join Discord: <a href="https://discord.gg/4hGKAHdvp6" target="_blank" rel="noopener noreferrer">GZO</a></p>
+      </div>
+    </div>
+
+    <div class="panel" id="folderPanel">
+      <div class="drop" id="drop" role="button" tabindex="0">
+        <strong>Pick world folder</strong>
+        <div class="sub">Click once and select a single world save folder (the one with HostPlayer.csav). Or pick the whole Grounded folder to choose a world.</div>
+        <input type="file" id="folderInput" webkitdirectory directory multiple />
+      </div>
+      <div class="steps">
+        <div>1. Open: <b>%USERPROFILE%\Saved Games\Grounded\</b></div>
+        <div>2. Prefer picking <b>one world folder</b> (contains <b>HostPlayer.csav</b> + <b>World.csav</b>) — it loads immediately</div>
+        <div>3. Or pick the parent <b>Grounded</b> folder if you want a list of worlds</div>
+        <div>4. Edit tabs → <b>Save changes</b> (creates <b>GZO_Backup_…</b> first when supported)</div>
+      </div>
+      <div class="path">%USERPROFILE%\Saved Games\Grounded\</div>
+    </div>
+    <div class="status" id="status">Click the panel above to pick your Grounded saves folder.</div>
+
+    <div id="editorRoot" class="hidden">
+      <div class="toolbar">
+        <button type="button" class="btn btn-ok" id="btnSave">Save changes</button>
+        <button type="button" class="btn" id="btnChangeFolder">Change folder</button>
+      </div>
+      <div class="meta" id="folderMeta"></div>
+
+      <div class="select-row hidden" id="worldRow">
+        <label for="worldSelect">World save</label>
+        <div class="world-list" id="worldList"></div>
+      </div>
+      <div class="select-row hidden" id="playerRow">
+        <label for="playerSelect">Player file</label>
+        <select id="playerSelect"></select>
+      </div>
+
+      <div class="tabs" id="tabs">
+        <button type="button" class="tab active" data-tab="player">Player</button>
+        <button type="button" class="tab" data-tab="inventory">Inventory</button>
+        <button type="button" class="tab" data-tab="gear">Gear</button>
+        <button type="button" class="tab" data-tab="quests">Quests</button>
+        <button type="button" class="tab" data-tab="shop">Shop</button>
+        <button type="button" class="tab" data-tab="mutations">Mutations</button>
+        <button type="button" class="tab" data-tab="map">Map</button>
+        <button type="button" class="tab" data-tab="data">Data</button>
+      </div>
+
+      <div class="panel view active" id="view-player">
+        <div class="section">
+          <h3 class="section-title">Raw Science <span>via Science Dust items</span></h3>
+          <p class="hint">Grounded stores raw science as inventory items <code>ScienceDustTier1/2/3</code>. The total below is their combined count. Setting the value adds or sets <code>ScienceDustTier3</code> stacks.</p>
+          <div class="row">
+            <div><label for="rawScience">Raw Science (dust proxy)</label><input type="number" id="rawScience" min="0" step="1" /></div>
+            <div><label>Dust breakdown</label><input type="text" id="dustBreakdown" readonly /></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxScience">Max science (Tier3 ×999)</button>
+          </div>
+        </div>
+        <div class="section">
+          <h3 class="section-title">Milk Molars <span>HostPlayer upgrades</span></h3>
+          <div class="molar-grid" id="milkMolars"></div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxMilk">Max all milk molars</button>
+          </div>
+        </div>
+        <div class="section">
+          <h3 class="section-title">Mega / Gold Molars <span>World.csav stack sizes</span></h3>
+          <div class="molar-grid" id="megaMolars"></div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxMega">Max all mega molars</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-inventory">
+        <div class="section">
+          <h3 class="section-title">Inventory <span id="invCount">0 items</span></h3>
+          <p class="hint">Rename items in-place only when the new name is the same byte length (padded). Use an empty slot (count 0) to add items with matching-length names.</p>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxStacks">Max stacks (999)</button>
+            <button type="button" class="btn" id="btnAddItem">Add item row</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="invTable">
+              <thead><tr><th>Item name</th><th>Count</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-gear">
+        <div class="section">
+          <h3 class="section-title">Equipped gear <span id="gearCount">0 slots</span></h3>
+          <p class="hint">Upgrade tokens like <code>WeaponUpgrade.Special</code> or <code>WeaponUpgrade.ArmorDefault</code>. Same-length rule applies for renames.</p>
+          <div id="gearList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-quests">
+        <div class="section">
+          <h3 class="section-title">Quests <span id="questCount">0</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnCompleteQuests">Complete all</button>
+          </div>
+          <div class="grid-checks" id="questList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-shop">
+        <div class="section">
+          <h3 class="section-title">Shop / TechChip unlocks <span id="shopCount">0</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnUnlockShop">Unlock all</button>
+          </div>
+          <div class="grid-checks" id="shopList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-mutations">
+        <div class="section">
+          <h3 class="section-title">Mutations <span id="mutationCount">0</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnUnlockMutations">Unlock all</button>
+          </div>
+          <div class="grid-checks" id="mutationList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-map">
+        <div class="section">
+          <h3 class="section-title">Map discoveries <span id="mapCount">0</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnUnlockMap">Unlock all</button>
+          </div>
+          <div class="grid-checks" id="mapList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-data">
+        <div class="section">
+          <h3 class="section-title">Creature cards <span id="cardCount">0</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxGold">Max all gold cards</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="cardTable">
+              <thead><tr><th>Creature</th><th>White</th><th>Gold</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="section">
+          <h3 class="section-title">Kill stats <span id="killCount">0</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxKills">Set all kills to 1777777777</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="killTable">
+              <thead><tr><th>Stat</th><th>Kills</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer-note">Grounded <code>.csav</code> files use Oodle Kraken compression for reads (decompressed via <a href="https://www.npmjs.com/package/ooz-wasm" target="_blank" rel="noopener">ooz-wasm</a>, GPL). Saves are always re-encoded as stored (<code>cc 06</code>) uncompressed payloads.</p>
+  </div>
+
+  <script type="module">
+const $ = (id) => document.getElementById(id);
+
+/** Lazy-load Oodle so folder-picker UI works even if WASM is slow/fails. */
+let decompressFn = null;
+let decompressLoadPromise = null;
+async function getDecompress() {
+  if (decompressFn) return decompressFn;
+  if (!decompressLoadPromise) {
+    decompressLoadPromise = import('./grounded-oodle.js').then((m) => {
+      decompressFn = m.decompress;
+      return decompressFn;
+    }).catch((err) => {
+      decompressLoadPromise = null;
+      throw new Error('Could not load Oodle decompressor (grounded-oodle.js / grounded-ooz.js). Serve this page over http(s) next to those files. ' + (err && err.message ? err.message : err));
+    });
+  }
+  return decompressLoadPromise;
+}
+// Warm-load in background; ignore failures until a .csav needs it.
+getDecompress().catch(() => {});
+const utf8dec = new TextDecoder('utf-8');
+const utf8enc = new TextEncoder();
+
+const MAGIC_STORED = 0x06cc;
+const MAGIC_OODLE = 0x068c;
+const TABLE_ITEMS = '/Game/Blueprints/Items/Table_AllItems.Table_AllItems\0';
+const UPGRADE_KEYS = ['Perks', 'Health', 'Healing', 'Stamina'];
+const MILK_FIELDS = [
+  { key: 'Perks', label: 'Max Active Mutations', max: 3 },
+  { key: 'Health', label: 'Max Health', max: 6 },
+  { key: 'Healing', label: 'Healing', max: 5, force: 5 },
+  { key: 'Stamina', label: 'Max Stamina', max: 5, force: 5 },
+  { key: 'Hunger', label: 'Hunger/Thirst Drain', max: 5, status: true },
+];
+const MEGA_FIELDS = [
+  { str: 'StackSize.Food', label: 'Max Consumable Stack', key: 'food', max: 5 },
+  { str: 'StackSize.Resource', label: 'Max Resource Stack', key: 'resource', max: 5 },
+  { str: 'StackSize.Ammo', label: 'Max Arrow Stack', key: 'ammo', max: 5 },
+];
+const STATUS_PREFIXES = ['PlayerUpgradeHunger', 'PlayerUpgradeThirst', 'PlayerUpgradeHealth', 'PlayerUpgradeHealing', 'PlayerUpgradeStamina'];
+const STATUS_MAX = { PlayerUpgradeHunger: 5, PlayerUpgradeThirst: 5, PlayerUpgradeHealth: 6, PlayerUpgradeHealing: 5, PlayerUpgradeStamina: 5 };
+const DUST_ITEMS = ['ScienceDustTier1', 'ScienceDustTier2', 'ScienceDustTier3'];
+const KILL_TARGET = 1777777777;
+
+const state = {
+  dirHandle: null,
+  folderName: '',
+  worlds: [],
+  currentWorldIdx: -1,
+  currentPlayer: 'HostPlayer.csav',
+  hostBody: null,
+  worldBody: null,
+  playerBody: null,
+  playerIsHost: true,
+  originalHost: null,
+  originalWorld: null,
+  originalPlayer: null,
+  parsed: null,
+  fileHandles: {},
+};
+
+function setStatus(msg, kind) {
+  const el = $('status');
+  el.textContent = msg;
+  el.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function bytesIndexOf(haystack, needle, from = 0) {
+  outer: for (let i = from; i <= haystack.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+function dv(data) {
+  return new DataView(data.buffer, data.byteOffset, data.byteLength);
+}
+
+function readU32(data, off) { return dv(data).getUint32(off, true); }
+function writeU32(data, off, val) { dv(data).setUint32(off, val, true); }
+function readU64(data, off) {
+  const v = dv(data);
+  const lo = v.getUint32(off, true);
+  const hi = v.getUint32(off + 4, true);
+  return hi * 0x100000000 + lo;
+}
+function writeU64(data, off, val) {
+  const v = dv(data);
+  v.setUint32(off, val >>> 0, true);
+  v.setUint32(off + 4, Math.floor(val / 0x100000000) >>> 0, true);
+}
+
+function readFString(data, off) {
+  const start = off;
+  const len = dv(data).getInt32(off, true);
+  off += 4;
+  if (len === 0) return { str: '', start, next: off, lenField: 0, rawLen: 0 };
+  if (len < 0) {
+    const charCount = -len;
+    const byteLen = charCount * 2;
+    let str = '';
+    for (let i = 0; i < charCount - 1; i++) {
+      str += String.fromCharCode(dv(data).getUint16(off + i * 2, true));
+    }
+    return { str, start, next: off + byteLen, lenField: len, rawLen: byteLen, utf16: true };
+  }
+  const str = utf8dec.decode(data.subarray(off, off + Math.max(0, len - 1)));
+  return { str, start, next: off + len, lenField: len, rawLen: len, utf16: false };
+}
+
+function writeFStringInPlace(data, entry, newStr) {
+  if (entry.utf16) return { ok: false, reason: 'UTF-16 strings cannot be edited in-place.' };
+  const encoded = utf8enc.encode(newStr);
+  const need = encoded.length + 1;
+  if (need !== entry.rawLen) {
+    return { ok: false, reason: `Name length must stay ${entry.rawLen} bytes (got ${need}). Pad or pick another name.` };
+  }
+  data.set(encoded, entry.start + 4);
+  data[entry.start + 4 + encoded.length] = 0;
+  return { ok: true };
+}
+
+function patchFStringSuffix(data, off, newSuffix) {
+  const fs = readFString(data, off);
+  const base = fs.str.replace(/\d+$/, '');
+  const patched = base + String(newSuffix);
+  return writeFStringInPlace(data, fs, patched);
+}
+
+function findPath(data, pathStr) {
+  const needle = utf8enc.encode(pathStr.endsWith('\0') ? pathStr : pathStr + '\0');
+  return bytesIndexOf(data, needle);
+}
+
+function regionBetween(data, startPath, endPath) {
+  const s = findPath(data, startPath);
+  if (s < 0) return null;
+  const e = endPath ? findPath(data, endPath, s + 1) : data.length;
+  return { start: s, end: e < 0 ? data.length : e };
+}
+
+async function decodeCsav(buf) {
+  const data = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  if (data.length < 10) throw new Error('csav too small');
+  const unc = readU32(data, 0);
+  const comp = readU32(data, 4);
+  if (comp !== data.length - 8) throw new Error('csav size mismatch');
+  const magic = readU32(data, 8) & 0xffff;
+  if (magic === MAGIC_STORED) {
+    const body = data.slice(10, 10 + unc);
+    if (body.length !== unc) throw new Error('stored body length mismatch');
+    return body;
+  }
+  if (magic === MAGIC_OODLE) {
+    const decompress = await getDecompress();
+    const payload = data.slice(8);
+    const body = await decompress(payload, unc);
+    if (body.length !== unc) throw new Error('Oodle body length mismatch');
+    return body;
+  }
+  throw new Error('unknown csav magic 0x' + magic.toString(16));
+}
+
+function encodeCsavStored(body) {
+  const out = new Uint8Array(10 + body.length);
+  writeU32(out, 0, body.length);
+  writeU32(out, 4, 2 + body.length);
+  out[8] = 0xcc;
+  out[9] = 0x06;
+  out.set(body, 10);
+  return out;
+}
+
+function isWorldFolderName(name) {
+  return /^\((ID-|PG-)/.test(name);
+}
+
+function parsePlayerUpgrades(data) {
+  const idx = findPath(data, '/Script/Maine.PlayerUpgradeComponent');
+  if (idx < 0) return { upgrades: {}, statusPatches: [] };
+  let off = idx + utf8enc.encode('/Script/Maine.PlayerUpgradeComponent\0').length + 8;
+  const upgrades = {};
+  while (off + 12 <= data.length) {
+    const fs = readFString(data, off);
+    if (!fs.str || !UPGRADE_KEYS.includes(fs.str)) break;
+    off = fs.next;
+    const val = readU64(data, off);
+    upgrades[fs.str] = { value: Number(val), valOff: off, nameOff: fs.start, name: fs.str };
+    off += 8;
+  }
+  const statusPatches = [];
+  for (const prefix of STATUS_PREFIXES) {
+    let pos = 0;
+    const needle = utf8enc.encode(prefix);
+    while (pos < data.length) {
+      const hit = bytesIndexOf(data, needle, pos);
+      if (hit < 0) break;
+      const fsStart = hit - 4;
+      if (fsStart >= 0) {
+        try {
+          const fs = readFString(data, fsStart);
+          if (fs.str && fs.str.startsWith(prefix)) {
+            const maxN = STATUS_MAX[prefix];
+            const curN = parseInt(fs.str.slice(prefix.length), 10);
+            if (!Number.isNaN(curN) && curN < maxN) {
+              statusPatches.push({ off: fs.start, prefix, maxN, curN, str: fs.str });
+            }
+          }
+        } catch (_) {}
+      }
+      pos = hit + 1;
+    }
+  }
+  return { upgrades, statusPatches };
+}
+
+function parseStackSizes(data) {
+  const result = {};
+  for (const field of MEGA_FIELDS) {
+    let pos = 0;
+    const needle = utf8enc.encode(field.str + '\0');
+    while (pos < data.length) {
+      const hit = bytesIndexOf(data, needle, pos);
+      if (hit < 0) break;
+      const fsStart = hit - 4;
+      let valOff = -1;
+      let value = 0;
+      let width = 8;
+      if (fsStart >= 0) {
+        const fs = readFString(data, fsStart);
+        const after = fs.next;
+        if (after + 8 <= data.length) {
+          const v64 = readU64(data, after);
+          if (v64 <= 20) {
+            valOff = after;
+            value = Number(v64);
+            width = 8;
+          }
+        }
+        if (valOff < 0 && after + 4 <= data.length) {
+          const v32 = readU32(data, after);
+          if (v32 <= 20) {
+            valOff = after;
+            value = v32;
+            width = 4;
+          }
+        }
+      }
+      if (valOff >= 0 && !result[field.key]) {
+        result[field.key] = { label: field.label, max: field.max, value, valOff, width, str: field.str };
+      }
+      pos = hit + 1;
+    }
+  }
+  return result;
+}
+
+function scanTableItems(data, start, end) {
+  const items = [];
+  const tableNeedle = utf8enc.encode(TABLE_ITEMS);
+  let pos = start;
+  while (pos < end) {
+    const hit = bytesIndexOf(data, tableNeedle, pos);
+    if (hit < 0 || hit >= end) break;
+    let off = hit + tableNeedle.length;
+    if (off + 8 > end) break;
+    const fs = readFString(data, off);
+    if (!fs.str || fs.str.includes('Table_') || fs.str.startsWith('/')) {
+      pos = hit + 1;
+      continue;
+    }
+    off = fs.next;
+    if (off + 8 > end) break;
+    const fieldA = readU32(data, off);
+    const count = readU32(data, off + 4);
+    items.push({
+      name: fs.str,
+      nameOff: fs.start,
+      nameEntry: fs,
+      fieldA,
+      count,
+      countOff: off + 4,
+      fieldAOff: off,
+    });
+    pos = off + 8;
+  }
+  return items;
+}
+
+function parseInventory(data) {
+  const reg = regionBetween(data, '/Script/Maine.InventoryComponent', '/Script/Maine.EquipmentComponent');
+  const start = reg ? reg.start : 0;
+  const end = reg ? reg.end : data.length;
+  return scanTableItems(data, start, end);
+}
+
+function parseGear(data) {
+  const reg = regionBetween(data, '/Script/Maine.EquipmentComponent', '/Script/Maine.SurvivalComponent');
+  const start = reg ? reg.start : 0;
+  const end = reg ? reg.end : data.length;
+  const items = scanTableItems(data, start, end);
+  for (const item of items) {
+    let off = item.fieldAOff + 8;
+    for (let i = 0; i < 6 && off + 4 < end; i++) {
+      const fs = readFString(data, off);
+      if (!fs.str) break;
+      if (fs.str.startsWith('WeaponUpgrade.')) {
+        item.upgrade = fs.str;
+        item.upgradeOff = fs.start;
+        item.upgradeEntry = fs;
+        break;
+      }
+      off = fs.next + 8;
+    }
+  }
+  return items;
+}
+
+function parseQuests(data) {
+  const reg = regionBetween(data, '/Script/Maine.QuestManagerComponent', null);
+  const start = reg ? reg.start : 0;
+  const end = data.length;
+  const quests = [];
+  const seen = new Set();
+  let pos = start;
+  while (pos < end) {
+    const fs = readFString(data, pos);
+    if (!fs.str) { pos += 4; continue; }
+    const isQuest = fs.str.length > 3 && !fs.str.includes('/') && !fs.str.includes('Table_') &&
+      !fs.str.includes('Component') && !fs.str.includes('Property') && /^[A-Za-z][A-Za-z0-9_]+$/.test(fs.str);
+    if (isQuest && fs.next + 4 <= end) {
+      const statusOff = fs.next;
+      const status = readU32(data, statusOff);
+      if (status <= 4 && !seen.has(fs.str)) {
+        seen.add(fs.str);
+        quests.push({ name: fs.str, nameOff: fs.start, statusOff, status });
+      }
+    }
+    pos = fs.next;
+    if (pos - start > 500000) break;
+  }
+  return quests;
+}
+
+function parseShopUnlocks(hostData, worldData) {
+  const unlocks = [];
+  const seen = new Set();
+  for (const data of [hostData, worldData]) {
+    if (!data) continue;
+    let pos = 0;
+    while (pos < data.length) {
+      const fs = readFString(data, pos);
+      if (!fs.str) { pos += 4; continue; }
+      if ((fs.str.includes('TechChip') || fs.str.includes('Recipe') || fs.str.includes('Shop')) &&
+          fs.str.length > 4 && fs.str.length < 120 && !seen.has(fs.str)) {
+        seen.add(fs.str);
+        let flagOff = -1;
+        let flag = 0;
+        if (fs.next + 4 <= data.length) {
+          flagOff = fs.next;
+          flag = readU32(data, flagOff);
+        }
+        unlocks.push({ name: fs.str, nameOff: fs.start, flagOff, flag, source: data === hostData ? 'Host' : 'World' });
+      }
+      pos = fs.next;
+    }
+  }
+  return unlocks;
+}
+
+function parseMutations(data) {
+  const idx = findPath(data, '/Script/Maine.PerkComponent');
+  if (idx < 0) return [];
+  let off = idx + utf8enc.encode('/Script/Maine.PerkComponent\0').length + 8;
+  const end = Math.min(data.length, off + 800000);
+  const perks = [];
+  const seen = new Set();
+  while (off + 16 < end) {
+    const fs = readFString(data, off);
+    if (!fs.str || fs.str.includes('/') || fs.str.includes('Property') || fs.str.length > 80) {
+      off += 1;
+      if (off - idx > 200000) break;
+      continue;
+    }
+    off = fs.next;
+    if (off + 12 > end) break;
+    const rank = readU32(data, off);
+    const unlocked = readU32(data, off + 4);
+    const pad = readU32(data, off + 8);
+    if (rank <= 20 && unlocked <= 2 && !seen.has(fs.str)) {
+      seen.add(fs.str);
+      perks.push({
+        name: fs.str,
+        nameOff: fs.start,
+        rankOff: off,
+        unlockedOff: off + 4,
+        rank,
+        unlocked,
+        pad,
+      });
+    }
+    off += 12;
+  }
+  return perks;
+}
+
+function parseMap(data) {
+  const reg = regionBetween(data, '/Script/Maine.MapComponent', null);
+  const start = reg ? reg.start : 0;
+  const entries = [];
+  const seen = new Set();
+  let pos = start;
+  while (pos < data.length - 8) {
+    const fs = readFString(data, pos);
+    if (!fs.str) { pos += 4; continue; }
+    if ((fs.str.startsWith('POI_') || fs.str.startsWith('Field_Station')) && !seen.has(fs.str)) {
+      seen.add(fs.str);
+      let flagOff = -1;
+      let flag = 0;
+      if (fs.next + 4 <= data.length) {
+        flagOff = fs.next;
+        flag = readU32(data, flagOff);
+      }
+      entries.push({ name: fs.str, nameOff: fs.start, flagOff, flag });
+    }
+    pos = fs.next;
+    if (pos - start > 600000) break;
+  }
+  return entries;
+}
+
+function parseCards(data) {
+  const cards = [];
+  const seen = new Set();
+  let pos = 0;
+  while (pos < data.length - 8) {
+    const fs = readFString(data, pos);
+    if (!fs.str) { pos += 4; continue; }
+    const isCard = fs.str.includes('Card') || fs.str.includes('GoldCard') || fs.str.includes('Bestiary');
+    if (isCard && fs.str.length > 3 && fs.str.length < 100 && !seen.has(fs.str)) {
+      seen.add(fs.str);
+      let whiteOff = -1, goldOff = -1, white = 0, gold = 0;
+      if (fs.next + 8 <= data.length) {
+        whiteOff = fs.next;
+        goldOff = fs.next + 4;
+        white = readU32(data, whiteOff);
+        gold = readU32(data, goldOff);
+      }
+      cards.push({ name: fs.str, nameOff: fs.start, whiteOff, goldOff, white, gold });
+    }
+    pos = fs.next;
+  }
+  return cards;
+}
+
+function parseKills(data) {
+  const kills = [];
+  const seen = new Set();
+  let pos = 0;
+  while (pos < data.length - 8) {
+    const fs = readFString(data, pos);
+    if (!fs.str) { pos += 4; continue; }
+    if ((fs.str.includes('Stat_Kills') || fs.str.includes('Stat_Party_')) && !seen.has(fs.str)) {
+      seen.add(fs.str);
+      let killOff = -1;
+      let killsVal = 0;
+      if (fs.next + 4 <= data.length) {
+        killOff = fs.next;
+        killsVal = readU32(data, killOff);
+      }
+      kills.push({ name: fs.str, nameOff: fs.start, killOff, kills: killsVal });
+    }
+    pos = fs.next;
+  }
+  return kills;
+}
+
+function parseAll(hostBody, worldBody, playerBody) {
+  const hostUp = parsePlayerUpgrades(hostBody);
+  return {
+    upgrades: hostUp.upgrades,
+    statusPatches: hostUp.statusPatches,
+    mega: parseStackSizes(worldBody),
+    inventory: parseInventory(playerBody),
+    gear: parseGear(playerBody),
+    quests: parseQuests(worldBody),
+    shop: parseShopUnlocks(hostBody, worldBody),
+    mutations: parseMutations(playerBody),
+    map: parseMap(worldBody),
+    cards: parseCards(playerBody),
+    kills: parseKills(playerBody),
+  };
+}
+
+function dustTotal(inventory) {
+  let sum = 0;
+  const parts = [];
+  for (const tier of DUST_ITEMS) {
+    const item = inventory.find((i) => i.name === tier);
+    const c = item ? item.count : 0;
+    sum += c;
+    parts.push(`${tier.replace('ScienceDust', '')}:${c}`);
+  }
+  return { sum, parts };
+}
+
+function renderAll() {
+  if (!state.parsed) return;
+  const p = state.parsed;
+
+  $('folderMeta').innerHTML =
+    `<b>Folder:</b> ${esc(state.folderName)} &nbsp; <b>World:</b> ${esc(state.worlds[state.currentWorldIdx]?.name || '—')} &nbsp; <b>Player:</b> ${esc(state.currentPlayer)}`;
+
+  const dust = dustTotal(p.inventory);
+  $('rawScience').value = dust.sum;
+  $('dustBreakdown').value = dust.parts.join(' · ') || 'none found';
+
+  const milkEl = $('milkMolars');
+  milkEl.innerHTML = '';
+  for (const f of MILK_FIELDS) {
+    if (f.status) {
+      const cur = p.statusPatches.filter((s) => s.prefix.startsWith('PlayerUpgradeHunger') || s.prefix.startsWith('PlayerUpgradeThirst')).length;
+      milkEl.innerHTML += `<div class="molar-card"><div class="name">${esc(f.label)}</div><span class="badge">status strings</span> <span class="badge">${cur} patchable</span></div>`;
+      continue;
+    }
+    const u = p.upgrades[f.key];
+    const val = u ? u.value : 0;
+    milkEl.innerHTML += `<div class="molar-card"><div class="name">${esc(f.label)}</div><input type="number" min="0" max="${f.max}" data-milk="${f.key}" value="${f.force !== undefined ? Math.min(f.force, f.max) : val}" /></div>`;
+  }
+
+  const megaEl = $('megaMolars');
+  megaEl.innerHTML = '';
+  for (const field of MEGA_FIELDS) {
+    const m = p.mega[field.key];
+    megaEl.innerHTML += `<div class="molar-card"><div class="name">${esc(field.label)}</div><input type="number" min="0" max="${field.max}" data-mega="${field.key}" value="${m ? m.value : 0}" /></div>`;
+  }
+
+  $('invCount').textContent = p.inventory.filter((i) => i.count > 0).length + ' items';
+  const tbody = $('invTable').querySelector('tbody');
+  tbody.innerHTML = '';
+  for (const item of p.inventory) {
+    if (item.count === 0 && !item._showEmpty) continue;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="text" data-inv-name="${escAttr(item.name)}" value="${escAttr(item.name)}" /></td>
+      <td><input type="number" min="0" max="9999" data-inv-count="${escAttr(item.name)}" value="${item.count}" /></td>
+      <td><span class="badge">${item.nameEntry.rawLen}B</span></td>`;
+    tr.dataset.nameOff = item.nameOff;
+    tr.dataset.countOff = item.countOff;
+    tbody.appendChild(tr);
+  }
+
+  $('gearCount').textContent = p.gear.length + ' slots';
+  const gearEl = $('gearList');
+  gearEl.innerHTML = '';
+  for (const g of p.gear) {
+    const row = document.createElement('div');
+    row.className = 'upgrade-row';
+    row.innerHTML = `<label>${esc(g.name)}</label>
+      <input type="text" data-gear-name value="${escAttr(g.name)}" style="flex:1;min-width:140px" />
+      <input type="text" data-gear-upgrade value="${escAttr(g.upgrade || '')}" placeholder="WeaponUpgrade.*" style="flex:1;min-width:140px" />
+      <button type="button" class="btn" data-gear-bump>Bump upgrade</button>`;
+    row.dataset.idx = p.gear.indexOf(g);
+    gearEl.appendChild(row);
+  }
+
+  renderCheckList('questList', p.quests, 'quest');
+  $('questCount').textContent = String(p.quests.length);
+  renderCheckList('shopList', p.shop, 'shop');
+  $('shopCount').textContent = String(p.shop.length);
+  renderCheckList('mutationList', p.mutations, 'mutation');
+  $('mutationCount').textContent = String(p.mutations.length);
+  renderCheckList('mapList', p.map, 'map');
+  $('mapCount').textContent = String(p.map.length);
+
+  const cardBody = $('cardTable').querySelector('tbody');
+  cardBody.innerHTML = '';
+  for (const c of p.cards) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(c.name)}</td>
+      <td><input type="checkbox" data-card-white="${escAttr(c.name)}" ${c.white ? 'checked' : ''} /></td>
+      <td><input type="checkbox" data-card-gold="${escAttr(c.name)}" ${c.gold ? 'checked' : ''} /></td>`;
+    cardBody.appendChild(tr);
+  }
+  $('cardCount').textContent = String(p.cards.length);
+
+  const killBody = $('killTable').querySelector('tbody');
+  killBody.innerHTML = '';
+  for (const k of p.kills) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(k.name)}</td><td><input type="number" min="0" data-kill="${escAttr(k.name)}" value="${k.kills}" /></td>`;
+    killBody.appendChild(tr);
+  }
+  $('killCount').textContent = String(p.kills.length);
+}
+
+function renderCheckList(id, items, kind) {
+  const el = $(id);
+  el.innerHTML = '';
+  for (const item of items) {
+    const label = document.createElement('label');
+    label.className = 'chk';
+    const checked = kind === 'quest' ? item.status >= 1 : kind === 'shop' ? item.flag >= 1 : kind === 'mutation' ? item.unlocked >= 1 : item.flag >= 1;
+    label.innerHTML = `<input type="checkbox" data-${kind}="${escAttr(item.name)}" ${checked ? 'checked' : ''} /> ${esc(item.name)}`;
+    el.appendChild(label);
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escAttr(s) { return esc(s).replace(/'/g, '&#39;'); }
+
+function syncFromUI() {
+  if (!state.parsed) return;
+  const p = state.parsed;
+
+  for (const inp of document.querySelectorAll('[data-milk]')) {
+    const key = inp.dataset.milk;
+    const field = MILK_FIELDS.find((f) => f.key === key);
+    if (!field || field.status) continue;
+    const val = Math.min(parseInt(inp.value, 10) || 0, field.max);
+    if (p.upgrades[key]) p.upgrades[key].value = field.force !== undefined ? field.force : val;
+  }
+
+  for (const inp of document.querySelectorAll('[data-mega]')) {
+    const key = inp.dataset.mega;
+    if (p.mega[key]) p.mega[key].value = Math.min(parseInt(inp.value, 10) || 0, p.mega[key].max);
+  }
+
+  const rawVal = parseInt($('rawScience').value, 10) || 0;
+  let tier3 = p.inventory.find((i) => i.name === 'ScienceDustTier3');
+  if (!tier3 && rawVal > 0) {
+    const empty = p.inventory.find((i) => i.count === 0);
+    if (empty) {
+      empty.name = 'ScienceDustTier3';
+      empty._renamed = true;
+      tier3 = empty;
+    }
+  }
+  if (tier3) tier3.count = rawVal;
+
+  for (const inp of document.querySelectorAll('[data-inv-name]')) {
+    const orig = inp.dataset.invName;
+    const item = p.inventory.find((i) => i.name === orig || i.nameOff === parseInt(inp.closest('tr')?.dataset.nameOff, 10));
+    if (item) {
+      item._newName = inp.value;
+      const cntInp = document.querySelector(`[data-inv-count="${CSS.escape(orig)}"]`) ||
+        inp.closest('tr')?.querySelector('[data-inv-count]');
+      if (cntInp) item.count = parseInt(cntInp.value, 10) || 0;
+    }
+  }
+
+  document.querySelectorAll('#gearList .upgrade-row').forEach((row, idx) => {
+    const g = p.gear[idx];
+    if (!g) return;
+    g._newName = row.querySelector('[data-gear-name]').value;
+    g._newUpgrade = row.querySelector('[data-gear-upgrade]').value;
+  });
+
+  for (const cb of document.querySelectorAll('[data-quest]')) {
+    const q = p.quests.find((x) => x.name === cb.dataset.quest);
+    if (q) q.status = cb.checked ? 2 : q.status;
+  }
+  for (const cb of document.querySelectorAll('[data-shop]')) {
+    const s = p.shop.find((x) => x.name === cb.dataset.shop);
+    if (s) s.flag = cb.checked ? 1 : s.flag;
+  }
+  for (const cb of document.querySelectorAll('[data-mutation]')) {
+    const m = p.mutations.find((x) => x.name === cb.dataset.mutation);
+    if (m) { m.unlocked = cb.checked ? 1 : 0; if (cb.checked) m.rank = Math.max(m.rank, 5); }
+  }
+  for (const cb of document.querySelectorAll('[data-map]')) {
+    const m = p.map.find((x) => x.name === cb.dataset.map);
+    if (m) m.flag = cb.checked ? 1 : 0;
+  }
+  for (const cb of document.querySelectorAll('[data-card-white]')) {
+    const c = p.cards.find((x) => x.name === cb.dataset.cardWhite);
+    if (c) c.white = cb.checked ? 1 : 0;
+  }
+  for (const cb of document.querySelectorAll('[data-card-gold]')) {
+    const c = p.cards.find((x) => x.name === cb.dataset.cardGold);
+    if (c) c.gold = cb.checked ? 1 : 0;
+  }
+  for (const inp of document.querySelectorAll('[data-kill]')) {
+    const k = p.kills.find((x) => x.name === inp.dataset.kill);
+    if (k) k.kills = parseInt(inp.value, 10) || 0;
+  }
+}
+
+function applyToBuffer(hostBuf, worldBuf, playerBuf, parsed) {
+  const host = new Uint8Array(hostBuf);
+  const world = new Uint8Array(worldBuf);
+  const player = new Uint8Array(playerBuf);
+
+  for (const f of MILK_FIELDS) {
+    if (f.status) continue;
+    const u = parsed.upgrades[f.key];
+    if (!u) continue;
+    const val = f.force !== undefined ? f.force : Math.min(u.value, f.max);
+    writeU64(host, u.valOff, val);
+  }
+  if (parsed._maxStatus) {
+    for (const prefix of STATUS_PREFIXES) {
+      const maxN = STATUS_MAX[prefix];
+      let pos = 0;
+      const needle = utf8enc.encode(prefix);
+      while (pos < host.length) {
+        const hit = bytesIndexOf(host, needle, pos);
+        if (hit < 0) break;
+        const fsStart = hit - 4;
+        if (fsStart >= 0) {
+          try {
+            const fs = readFString(host, fsStart);
+            if (fs.str && fs.str.startsWith(prefix)) patchFStringSuffix(host, fs.start, maxN);
+          } catch (_) {}
+        }
+        pos = hit + 1;
+      }
+    }
+  }
+
+  for (const key of Object.keys(parsed.mega)) {
+    const m = parsed.mega[key];
+    if (m.valOff < 0) continue;
+    const val = Math.min(m.value, m.max);
+    if (m.width === 4) writeU32(world, m.valOff, val);
+    else writeU64(world, m.valOff, val);
+  }
+
+  for (const item of parsed.inventory) {
+    if (item._newName && item._newName !== item.name) {
+      const r = writeFStringInPlace(player, item.nameEntry, item._newName);
+      if (!r.ok) throw new Error('Inventory rename: ' + r.reason);
+      item.name = item._newName;
+    } else if (item._renamed) {
+      const r = writeFStringInPlace(player, item.nameEntry, item.name);
+      if (!r.ok) throw new Error('Inventory add: ' + r.reason);
+    }
+    writeU32(player, item.countOff, item.count >>> 0);
+  }
+
+  for (const g of parsed.gear) {
+    if (g._newName && g._newName !== g.name) {
+      const r = writeFStringInPlace(player, g.nameEntry, g._newName);
+      if (!r.ok) throw new Error('Gear rename: ' + r.reason);
+    }
+    if (g._newUpgrade && g.upgradeEntry) {
+      const r = writeFStringInPlace(player, g.upgradeEntry, g._newUpgrade);
+      if (!r.ok) {
+        const known = ['WeaponUpgrade.Special', 'WeaponUpgrade.ArmorDefault', 'WeaponUpgrade.Super'];
+        const match = known.find((k) => k.length === g.upgradeEntry.rawLen - 1);
+        if (match && g._newUpgrade.includes('Special')) writeFStringInPlace(player, g.upgradeEntry, match.padEnd(g.upgradeEntry.rawLen - 1, '\0').replace(/\0/g, ''));
+      }
+    }
+  }
+
+  for (const q of parsed.quests) {
+    if (q.statusOff >= 0) writeU32(world, q.statusOff, q.status >= 1 ? 2 : q.status);
+  }
+
+  for (const s of parsed.shop) {
+    if (s.flagOff >= 0 && s.flag >= 1) {
+      const buf = s.source === 'Host' ? host : world;
+      writeU32(buf, s.flagOff, 1);
+    }
+  }
+
+  for (const m of parsed.mutations) {
+    if (m.rankOff >= 0) writeU32(player, m.rankOff, Math.max(m.rank, 5));
+    if (m.unlockedOff >= 0) writeU32(player, m.unlockedOff, m.unlocked >= 1 ? 1 : m.unlocked);
+  }
+
+  for (const m of parsed.map) {
+    if (m.flagOff >= 0 && m.flag >= 1) writeU32(world, m.flagOff, 1);
+  }
+
+  for (const c of parsed.cards) {
+    if (c.whiteOff >= 0) writeU32(player, c.whiteOff, c.white ? 1 : 0);
+    if (c.goldOff >= 0) writeU32(player, c.goldOff, c.gold ? 1 : 0);
+  }
+
+  for (const k of parsed.kills) {
+    if (k.killOff >= 0) writeU32(player, k.killOff, k.kills >>> 0);
+  }
+
+  if (state.playerIsHost) host.set(player);
+  return { host, world, player };
+}
+
+function maxMilk() {
+  for (const f of MILK_FIELDS) {
+    if (f.status) continue;
+    if (state.parsed.upgrades[f.key]) {
+      state.parsed.upgrades[f.key].value = f.force !== undefined ? f.force : f.max;
+    }
+  }
+  state.parsed._maxStatus = true;
+  renderAll();
+  setStatus('Milk molars maxed (status strings apply on save).', 'ok');
+}
+
+function maxMega() {
+  for (const field of MEGA_FIELDS) {
+    if (state.parsed.mega[field.key]) state.parsed.mega[field.key].value = field.max;
+  }
+  renderAll();
+  setStatus('Mega/Gold molars maxed.', 'ok');
+}
+
+function maxScience() {
+  syncFromUI();
+  let tier3 = state.parsed.inventory.find((i) => i.name === 'ScienceDustTier3');
+  if (!tier3) {
+    const empty = state.parsed.inventory.find((i) => i.count === 0);
+    if (empty) { empty.name = 'ScienceDustTier3'; empty._renamed = true; tier3 = empty; }
+  }
+  if (tier3) tier3.count = 999;
+  renderAll();
+  setStatus('ScienceDustTier3 set to 999.', 'ok');
+}
+
+function maxStacks() {
+  for (const item of state.parsed.inventory) {
+    if (item.count > 0) item.count = 999;
+  }
+  renderAll();
+  setStatus('Inventory stacks set to 999.', 'ok');
+}
+
+function completeQuests() {
+  for (const q of state.parsed.quests) q.status = 2;
+  renderAll();
+  setStatus('All quests marked complete.', 'ok');
+}
+
+function unlockShop() {
+  for (const s of state.parsed.shop) s.flag = 1;
+  renderAll();
+  setStatus('All shop entries unlocked.', 'ok');
+}
+
+function unlockMutations() {
+  for (const m of state.parsed.mutations) { m.unlocked = 1; m.rank = 5; }
+  renderAll();
+  setStatus('All mutations unlocked.', 'ok');
+}
+
+function unlockMap() {
+  for (const m of state.parsed.map) m.flag = 1;
+  renderAll();
+  setStatus('All map POIs unlocked.', 'ok');
+}
+
+function maxGold() {
+  for (const c of state.parsed.cards) { c.gold = 1; c.white = 1; }
+  renderAll();
+  setStatus('All gold cards enabled.', 'ok');
+}
+
+function maxKills() {
+  for (const k of state.parsed.kills) k.kills = KILL_TARGET;
+  renderAll();
+  setStatus('Kill counts set to ' + KILL_TARGET + '.', 'ok');
+}
+
+function addItemRow() {
+  const empty = state.parsed.inventory.find((i) => i.count === 0 && !i._showEmpty);
+  if (empty) {
+    empty._showEmpty = true;
+    renderAll();
+    setStatus('Empty slot shown — enter a same-length item name and count.', 'ok');
+  } else {
+    setStatus('No empty inventory slot (count 0) found. Remove an item or max-stacks first.', 'err');
+  }
+}
+
+async function loadWorld(idx) {
+  const w = state.worlds[idx];
+  if (!w) return;
+  state.currentWorldIdx = idx;
+  state.fileHandles = w.handles || {};
+
+  setStatus('Decoding HostPlayer.csav & World.csav…', '');
+  const hostFile = w.files['HostPlayer.csav'];
+  const worldFile = w.files['World.csav'];
+  if (!hostFile || !worldFile) throw new Error('Missing HostPlayer.csav or World.csav');
+
+  state.originalHost = new Uint8Array(await hostFile.arrayBuffer());
+  state.originalWorld = new Uint8Array(await worldFile.arrayBuffer());
+  state.hostBody = await decodeCsav(state.originalHost);
+  state.worldBody = await decodeCsav(state.originalWorld);
+
+  const playerSel = $('playerSelect');
+  playerSel.innerHTML = '';
+  for (const pf of w.playerFiles) {
+    const opt = document.createElement('option');
+    opt.value = pf;
+    opt.textContent = pf;
+    playerSel.appendChild(opt);
+  }
+  state.currentPlayer = w.playerFiles.includes('HostPlayer.csav') ? 'HostPlayer.csav' : w.playerFiles[0];
+  playerSel.value = state.currentPlayer;
+
+  await loadPlayerFile(state.currentPlayer);
+  document.querySelectorAll('.world-pick').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+  $('worldRow').classList.toggle('hidden', state.worlds.length <= 1);
+  $('playerRow').classList.toggle('hidden', w.playerFiles.length <= 1);
+  $('editorRoot').classList.remove('hidden');
+}
+
+async function loadPlayerFile(name) {
+  const w = state.worlds[state.currentWorldIdx];
+  state.currentPlayer = name;
+  state.playerIsHost = name === 'HostPlayer.csav';
+  const file = w.files[name];
+  if (!file) throw new Error('Player file not found: ' + name);
+  state.originalPlayer = new Uint8Array(await file.arrayBuffer());
+  state.playerBody = state.playerIsHost ? state.hostBody : await decodeCsav(state.originalPlayer);
+  state.parsed = parseAll(state.hostBody, state.worldBody, state.playerBody);
+  renderAll();
+  setStatus('Loaded ' + w.name + ' / ' + name, 'ok');
+}
+
+function renderWorldList() {
+  const el = $('worldList');
+  el.innerHTML = '';
+  state.worlds.forEach((w, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'world-pick' + (i === state.currentWorldIdx ? ' active' : '');
+    btn.innerHTML = `${esc(w.name)}<small>${w.playerFiles.length} player file(s)</small>`;
+    btn.addEventListener('click', async () => {
+      try { await loadWorld(i); } catch (e) { setStatus(e.message, 'err'); }
+    });
+    el.appendChild(btn);
+  });
+}
+
+async function buildWorldFromFiles(name, files, handles) {
+  const fileMap = {};
+  const playerFiles = [];
+  for (const [fname, file] of Object.entries(files)) {
+    fileMap[fname] = file;
+    if (fname === 'HostPlayer.csav' || /^Player_.*\.csav$/i.test(fname)) playerFiles.push(fname);
+  }
+  playerFiles.sort((a, b) => (a === 'HostPlayer.csav' ? -1 : b === 'HostPlayer.csav' ? 1 : a.localeCompare(b)));
+  if (!fileMap['HostPlayer.csav'] || !fileMap['World.csav']) return null;
+  return { name, files: fileMap, handles: handles || {}, playerFiles };
+}
+
+async function scanDirectoryHandle(dirHandle, prefix = '') {
+  const worlds = [];
+  const directFiles = {};
+  const directHandles = {};
+
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === 'file') {
+      if (/\.csav$|\.savheader$/i.test(name)) {
+        const file = await handle.getFile();
+        directFiles[name] = file;
+        directHandles[name] = handle;
+      }
+    }
+  }
+
+  if (directFiles['HostPlayer.csav'] && directFiles['World.csav']) {
+    const w = await buildWorldFromFiles(prefix || dirHandle.name, directFiles, directHandles);
+    if (w) { w.dirHandle = dirHandle; worlds.push(w); }
+    return worlds;
+  }
+
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind !== 'directory') continue;
+    const subFiles = {};
+    const subHandles = {};
+    for await (const [fn, fh] of handle.entries()) {
+      if (fh.kind === 'file' && /\.csav$|\.savheader$/i.test(fn)) {
+        subFiles[fn] = await fh.getFile();
+        subHandles[fn] = fh;
+      }
+    }
+    if (!subFiles['HostPlayer.csav'] || !subFiles['World.csav']) continue;
+    const w = await buildWorldFromFiles(name, subFiles, subHandles);
+    if (w) {
+      w.dirHandle = handle;
+      worlds.push(w);
+    }
+  }
+  worlds.sort((a, b) => a.name.localeCompare(b.name));
+  return worlds;
+}
+
+async function loadFromDirectoryHandle(dirHandle) {
+  state.dirHandle = dirHandle;
+  state.folderName = dirHandle.name;
+  setStatus('Loading ' + dirHandle.name + '…', '');
+  state.worlds = await scanDirectoryHandle(dirHandle);
+  if (!state.worlds.length) throw new Error('No Grounded world saves found. Pick a world folder that contains HostPlayer.csav and World.csav.');
+  renderWorldList();
+  await loadWorld(0);
+}
+
+async function loadFromFileList(fileList) {
+  state.dirHandle = null;
+  const byWorld = new Map();
+
+  for (const file of fileList) {
+    const rel = file.webkitRelativePath || file.name;
+    const parts = rel.split(/[/\\]/);
+    const base = parts[parts.length - 1];
+    if (!/\.csav$|\.savheader$/i.test(base)) continue;
+
+    let worldName;
+    let worldKey;
+    if (parts.length <= 2) {
+      worldName = parts[0] || 'selected';
+      worldKey = worldName;
+    } else {
+      worldName = parts[parts.length - 2];
+      worldKey = parts.slice(0, -1).join('/');
+    }
+
+    if (!byWorld.has(worldKey)) byWorld.set(worldKey, { name: worldName, files: {} });
+    byWorld.get(worldKey).files[base] = file;
+  }
+
+  state.worlds = [];
+  for (const [, w] of byWorld) {
+    const built = await buildWorldFromFiles(w.name, w.files, {});
+    if (built) state.worlds.push(built);
+  }
+  state.worlds.sort((a, b) => a.name.localeCompare(b.name));
+  state.folderName = [...byWorld.keys()][0]?.split('/')[0] || 'selected folder';
+  if (!state.worlds.length) throw new Error('No world saves with HostPlayer.csav and World.csav found.');
+
+  renderWorldList();
+  await loadWorld(0);
+  if (!state.dirHandle) {
+    setStatus('Folder loaded read-only. Use Chrome/Edge and grant write access to save in place.', 'err');
+  }
+}
+
+function stamp() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+
+async function backupFile(dirHandle, backupDir, name, bytes) {
+  const fh = await backupDir.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(bytes);
+  await w.close();
+}
+
+async function writeFileHandle(handle, bytes) {
+  const w = await handle.createWritable();
+  await w.write(bytes);
+  await w.close();
+}
+
+async function saveChanges() {
+  try {
+    if (!state.parsed || !state.worlds.length) throw new Error('Nothing loaded.');
+    syncFromUI();
+
+    const { host, world, player } = applyToBuffer(state.hostBody, state.worldBody, state.playerBody, state.parsed);
+    const hostEnc = encodeCsavStored(host);
+    const worldEnc = encodeCsavStored(world);
+    const playerEnc = state.playerIsHost ? hostEnc : encodeCsavStored(player);
+
+    const w = state.worlds[state.currentWorldIdx];
+    const worldDir = w.dirHandle || state.dirHandle;
+
+    if (worldDir && typeof worldDir.getDirectoryHandle === 'function') {
+      setStatus('Creating backup…', '');
+      const backupName = 'GZO_Backup_' + stamp();
+      const backupDir = await worldDir.getDirectoryHandle(backupName, { create: true });
+      await backupFile(worldDir, backupDir, 'HostPlayer.csav', state.originalHost);
+      await backupFile(worldDir, backupDir, 'World.csav', state.originalWorld);
+      if (!state.playerIsHost) await backupFile(worldDir, backupDir, state.currentPlayer, state.originalPlayer);
+
+      const hostH = w.handles['HostPlayer.csav'] || await worldDir.getFileHandle('HostPlayer.csav');
+      const worldH = w.handles['World.csav'] || await worldDir.getFileHandle('World.csav');
+      await writeFileHandle(hostH, hostEnc);
+      await writeFileHandle(worldH, worldEnc);
+      if (!state.playerIsHost) {
+        const plH = w.handles[state.currentPlayer] || await worldDir.getFileHandle(state.currentPlayer);
+        await writeFileHandle(plH, playerEnc);
+      }
+
+      state.originalHost = hostEnc.slice();
+      state.originalWorld = worldEnc.slice();
+      state.hostBody = host;
+      state.worldBody = world;
+      if (!state.playerIsHost) {
+        state.originalPlayer = playerEnc.slice();
+        state.playerBody = player;
+      } else {
+        state.playerBody = host;
+      }
+      state.parsed = parseAll(state.hostBody, state.worldBody, state.playerBody);
+      renderAll();
+      setStatus('Saved to ' + w.name + '. Backup: ' + backupName + '.', 'ok');
+    } else {
+      downloadBlob('HostPlayer.csav', hostEnc);
+      downloadBlob('World.csav', worldEnc);
+      if (!state.playerIsHost) downloadBlob(state.currentPlayer, playerEnc);
+      setStatus('Downloaded edited files (no write access). Replace originals manually.', 'ok');
+    }
+  } catch (e) {
+    setStatus('Save failed: ' + e.message, 'err');
+    console.error(e);
+  }
+}
+
+function downloadBlob(name, buf) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function resetToFolderPicker() {
+  state.worlds = [];
+  state.parsed = null;
+  state.dirHandle = null;
+  $('editorRoot').classList.add('hidden');
+  $('worldRow').classList.add('hidden');
+  $('playerRow').classList.add('hidden');
+  $('folderPanel').classList.remove('hidden');
+  try { $('folderInput').value = ''; } catch (_) {}
+  setStatus('Click the panel to pick a new folder.', '');
+}
+
+let allowNativeFolderInput = false;
+
+async function pickFolderWithFSAccess() {
+  let dirHandle = null;
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      setStatus('Folder selection cancelled.', '');
+      return;
+    }
+    // Picker itself failed (e.g. insecure context) — try read-only once, never after a successful pick.
+    try {
+      dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    } catch (e2) {
+      if (e2 && e2.name === 'AbortError') {
+        setStatus('Folder selection cancelled.', '');
+        return;
+      }
+      allowNativeFolderInput = true;
+      $('folderInput').click();
+      return;
+    }
+  }
+
+  try {
+    await loadFromDirectoryHandle(dirHandle);
+  } catch (err) {
+    setStatus('Could not open that folder: ' + (err && err.message ? err.message : err), 'err');
+    console.error(err);
+  }
+}
+
+// Overlay file input receives the click. Prefer File System Access API when available.
+$('folderInput').addEventListener('click', (e) => {
+  if (allowNativeFolderInput) {
+    allowNativeFolderInput = false;
+    return;
+  }
+  if (!window.showDirectoryPicker) return; // let browser open webkitdirectory picker
+  e.preventDefault();
+  e.stopPropagation();
+  pickFolderWithFSAccess();
+});
+
+$('drop').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  if (window.showDirectoryPicker) pickFolderWithFSAccess();
+  else $('folderInput').click();
+});
+
+$('folderInput').addEventListener('change', async () => {
+  try {
+    if (!$('folderInput').files?.length) return;
+    await loadFromFileList($('folderInput').files);
+  } catch (e) {
+    setStatus('Could not open folder: ' + e.message, 'err');
+  }
+});
+
+setStatus('Click once and pick your world folder (or the Grounded saves folder).', '');
+
+$('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t === btn));
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + btn.dataset.tab));
+});
+
+$('playerSelect').addEventListener('change', async () => {
+  try { await loadPlayerFile($('playerSelect').value); }
+  catch (e) { setStatus(e.message, 'err'); }
+});
+
+$('btnSave').addEventListener('click', () => saveChanges());
+$('btnChangeFolder').addEventListener('click', () => resetToFolderPicker());
+$('btnMaxMilk').addEventListener('click', () => { syncFromUI(); maxMilk(); });
+$('btnMaxMega').addEventListener('click', () => { syncFromUI(); maxMega(); });
+$('btnMaxScience').addEventListener('click', () => maxScience());
+$('btnMaxStacks').addEventListener('click', () => { syncFromUI(); maxStacks(); });
+$('btnAddItem').addEventListener('click', () => addItemRow());
+$('btnCompleteQuests').addEventListener('click', () => { syncFromUI(); completeQuests(); });
+$('btnUnlockShop').addEventListener('click', () => { syncFromUI(); unlockShop(); });
+$('btnUnlockMutations').addEventListener('click', () => { syncFromUI(); unlockMutations(); });
+$('btnUnlockMap').addEventListener('click', () => { syncFromUI(); unlockMap(); });
+$('btnMaxGold').addEventListener('click', () => { syncFromUI(); maxGold(); });
+$('btnMaxKills').addEventListener('click', () => { syncFromUI(); maxKills(); });
+
+$('gearList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-gear-bump]');
+  if (!btn) return;
+  const row = btn.closest('.upgrade-row');
+  const idx = parseInt(row.dataset.idx, 10);
+  const g = state.parsed?.gear[idx];
+  if (!g) return;
+  const inp = row.querySelector('[data-gear-upgrade]');
+  const tokens = ['WeaponUpgrade.Special', 'WeaponUpgrade.Super', 'WeaponUpgrade.ArmorDefault'];
+  const cur = inp.value || g.upgrade || '';
+  const next = tokens[(tokens.indexOf(cur) + 1) % tokens.length];
+  inp.value = next;
+  g._newUpgrade = next;
+});
+
+  </script>
+</body>
+</html>
