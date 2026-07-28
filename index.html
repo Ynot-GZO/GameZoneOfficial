@@ -232,16 +232,16 @@
 
     .hud-btn {
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: stretch;
       width: 100%;
-      min-height: 96px;
+      min-height: 108px;
       padding: 0;
+      overflow: hidden;
       font: inherit;
       font-size: 1.05rem;
       font-weight: 700;
       color: #fff;
-      text-align: center;
+      text-align: left;
       text-decoration: none;
       letter-spacing: 0.05em;
       text-transform: uppercase;
@@ -265,11 +265,24 @@
 
     .hud-btn:active { transform: translateY(0); }
 
+    .hud-btn__art {
+      width: 112px;
+      flex-shrink: 0;
+      object-fit: cover;
+      display: block;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .hud-btn__art[hidden] { display: none; }
+
     .hud-btn__label {
       position: relative;
       z-index: 1;
-      padding: 14px 16px;
-      width: 100%;
+      display: flex;
+      align-items: center;
+      padding: 14px 18px;
+      flex: 1;
+      min-width: 0;
     }
 
     .hud-btn--pal {
@@ -476,6 +489,7 @@
     @media (max-width: 640px) {
       body { padding: 72px 14px 80px; }
       .hud-grid { grid-template-columns: 1fr; }
+      .hud-btn__art { width: 92px; }
       .credits-button {
         top: 12px;
         right: 12px;
@@ -511,18 +525,23 @@
   <div class="hud-shell">
     <nav class="hud-grid" aria-label="Editors">
       <a class="hud-btn hud-btn--bl4" href="bl4-editor.html">
+        <img class="hud-btn__art" src="assets/covers/borderlands4.jpg" alt="" loading="lazy" onerror="this.hidden=true" />
         <span class="hud-btn__label">Borderlands 4</span>
       </a>
       <a class="hud-btn hud-btn--pal" href="editor.html">
+        <img class="hud-btn__art" src="assets/covers/palworld.jpg" alt="" loading="lazy" onerror="this.hidden=true" />
         <span class="hud-btn__label">Palworld</span>
       </a>
       <a class="hud-btn hud-btn--rsdw" href="rsdw-editor.html">
+        <img class="hud-btn__art" src="assets/covers/rsdw.jpg" alt="" loading="lazy" onerror="this.hidden=true" />
         <span class="hud-btn__label">RS Dragonwilds</span>
       </a>
       <a class="hud-btn hud-btn--gz" href="genzero-editor.html">
+        <img class="hud-btn__art" src="assets/covers/genzero.jpg" alt="" loading="lazy" onerror="this.hidden=true" />
         <span class="hud-btn__label">Generation Zero</span>
       </a>
       <a class="hud-btn hud-btn--mb" href="megabonk-editor.html">
+        <img class="hud-btn__art" src="assets/covers/megabonk.jpg" alt="" loading="lazy" onerror="this.hidden=true" />
         <span class="hud-btn__label">Megabonk</span>
       </a>
     </nav>
