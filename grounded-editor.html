@@ -235,28 +235,32 @@
 
       <div class="panel view active" id="view-player">
         <div class="section">
-          <h3 class="section-title">Raw Science <span>via Science Dust items</span></h3>
-          <p class="hint">Grounded stores raw science as inventory items <code>ScienceDustTier1/2/3</code>. The total below is their combined count. Setting the value adds or sets <code>ScienceDustTier3</code> stacks.</p>
+          <h3 class="section-title">Currencies <span>spendable counts</span></h3>
+          <p class="hint">Raw Science is stored on the world (party). Milk / Gold (Mega) molar counts are on the player upgrade block. Max sets each to <b>100,000,000</b>.</p>
           <div class="row">
-            <div><label for="rawScience">Raw Science (dust proxy)</label><input type="number" id="rawScience" min="0" step="1" /></div>
-            <div><label>Dust breakdown</label><input type="text" id="dustBreakdown" readonly /></div>
+            <div><label for="rawScience">Raw Science</label><input type="number" id="rawScience" min="0" step="1" /></div>
+            <div><label for="milkMolarCount">Milk Molars</label><input type="number" id="milkMolarCount" min="0" step="1" /></div>
+            <div><label for="goldMolarCount">Gold / Mega Molars</label><input type="number" id="goldMolarCount" min="0" step="1" /></div>
           </div>
           <div class="actions">
-            <button type="button" class="btn btn-primary" id="btnMaxScience">Max science (Tier3 ×999)</button>
+            <button type="button" class="btn btn-primary" id="btnMaxScience">Max Raw Science (100M)</button>
+            <button type="button" class="btn btn-primary" id="btnMaxMilkCount">Max Milk Molars (100M)</button>
+            <button type="button" class="btn btn-primary" id="btnMaxGoldCount">Max Gold Molars (100M)</button>
+            <button type="button" class="btn" id="btnMaxAllCurrency">Max all currencies (100M)</button>
           </div>
         </div>
         <div class="section">
-          <h3 class="section-title">Milk Molars <span>HostPlayer upgrades</span></h3>
+          <h3 class="section-title">Milk Molar upgrades <span>stat levels</span></h3>
           <div class="molar-grid" id="milkMolars"></div>
           <div class="actions">
-            <button type="button" class="btn btn-primary" id="btnMaxMilk">Max all milk molars</button>
+            <button type="button" class="btn btn-primary" id="btnMaxMilk">Max upgrades (HP6 / Stam5 / Hunger5 / Heal5 / Mut3)</button>
           </div>
         </div>
         <div class="section">
-          <h3 class="section-title">Mega / Gold Molars <span>World.csav stack sizes</span></h3>
+          <h3 class="section-title">Mega / Gold Molar upgrades <span>stack size levels</span></h3>
           <div class="molar-grid" id="megaMolars"></div>
           <div class="actions">
-            <button type="button" class="btn btn-primary" id="btnMaxMega">Max all mega molars</button>
+            <button type="button" class="btn btn-primary" id="btnMaxMega">Max stack upgrades (5 / 5 / 5)</button>
           </div>
         </div>
       </div>
@@ -264,14 +268,14 @@
       <div class="panel view" id="view-inventory">
         <div class="section">
           <h3 class="section-title">Inventory <span id="invCount">0 items</span></h3>
-          <p class="hint">Rename items in-place only when the new name is the same byte length (padded). Use an empty slot (count 0) to add items with matching-length names.</p>
+          <p class="hint">All backpack slots (including empty). Rename only works when the new name is the same byte length.</p>
           <div class="actions">
             <button type="button" class="btn btn-primary" id="btnMaxStacks">Max stacks (999)</button>
-            <button type="button" class="btn" id="btnAddItem">Add item row</button>
+            <button type="button" class="btn" id="btnAddItem">Show empty slot to edit</button>
           </div>
           <div class="table-wrap">
             <table class="data-table" id="invTable">
-              <thead><tr><th>Item name</th><th>Count</th><th></th></tr></thead>
+              <thead><tr><th>#</th><th>Item name</th><th>Count</th><th></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -280,8 +284,22 @@
 
       <div class="panel view" id="view-gear">
         <div class="section">
-          <h3 class="section-title">Equipped gear <span id="gearCount">0 slots</span></h3>
-          <p class="hint">Upgrade tokens like <code>WeaponUpgrade.Special</code> or <code>WeaponUpgrade.ArmorDefault</code>. Same-length rule applies for renames.</p>
+          <h3 class="section-title">Gear upgrades <span id="gearCount">0 items</span></h3>
+          <p class="hint">Pick any inventory/equipped item below, then set its upgrade token (e.g. <code>WeaponUpgrade.Special</code>). Same-length rule for renames.</p>
+          <div class="row">
+            <div>
+              <label for="gearSelect">Item</label>
+              <select id="gearSelect"></select>
+            </div>
+            <div>
+              <label for="gearUpgrade">Upgrade</label>
+              <input type="text" id="gearUpgrade" placeholder="WeaponUpgrade.Special" />
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnGearApply">Apply upgrade</button>
+            <button type="button" class="btn" id="btnGearBump">Cycle upgrade</button>
+          </div>
           <div id="gearList"></div>
         </div>
       </div>
@@ -318,7 +336,8 @@
 
       <div class="panel view" id="view-map">
         <div class="section">
-          <h3 class="section-title">Map discoveries <span id="mapCount">0</span></h3>
+          <h3 class="section-title">SCA.B / color schemes <span id="mapCount">0</span></h3>
+          <p class="hint">SCA.B flavor schemes and related scanner unlocks found in the save.</p>
           <div class="actions">
             <button type="button" class="btn btn-primary" id="btnUnlockMap">Unlock all</button>
           </div>
@@ -329,24 +348,14 @@
       <div class="panel view" id="view-data">
         <div class="section">
           <h3 class="section-title">Creature cards <span id="cardCount">0</span></h3>
+          <p class="hint">White / Gold peep cards from the world party data. Kill counts come from player stats when present.</p>
           <div class="actions">
             <button type="button" class="btn btn-primary" id="btnMaxGold">Max all gold cards</button>
-          </div>
-          <div class="table-wrap">
-            <table class="data-table" id="cardTable">
-              <thead><tr><th>Creature</th><th>White</th><th>Gold</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="section">
-          <h3 class="section-title">Kill stats <span id="killCount">0</span></h3>
-          <div class="actions">
             <button type="button" class="btn btn-primary" id="btnMaxKills">Set all kills to 1777777777</button>
           </div>
           <div class="table-wrap">
-            <table class="data-table" id="killTable">
-              <thead><tr><th>Stat</th><th>Kills</th></tr></thead>
+            <table class="data-table" id="cardTable">
+              <thead><tr><th>Creature</th><th>White</th><th>Gold</th><th>Kills</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -388,8 +397,8 @@ const UPGRADE_KEYS = ['Perks', 'Health', 'Healing', 'Stamina'];
 const MILK_FIELDS = [
   { key: 'Perks', label: 'Max Active Mutations', max: 3 },
   { key: 'Health', label: 'Max Health', max: 6 },
-  { key: 'Healing', label: 'Healing', max: 5, force: 5 },
-  { key: 'Stamina', label: 'Max Stamina', max: 5, force: 5 },
+  { key: 'Healing', label: 'Healing', max: 5 },
+  { key: 'Stamina', label: 'Max Stamina', max: 5 },
   { key: 'Hunger', label: 'Hunger/Thirst Drain', max: 5, status: true },
 ];
 const MEGA_FIELDS = [
@@ -399,8 +408,10 @@ const MEGA_FIELDS = [
 ];
 const STATUS_PREFIXES = ['PlayerUpgradeHunger', 'PlayerUpgradeThirst', 'PlayerUpgradeHealth', 'PlayerUpgradeHealing', 'PlayerUpgradeStamina'];
 const STATUS_MAX = { PlayerUpgradeHunger: 5, PlayerUpgradeThirst: 5, PlayerUpgradeHealth: 6, PlayerUpgradeHealing: 5, PlayerUpgradeStamina: 5 };
-const DUST_ITEMS = ['ScienceDustTier1', 'ScienceDustTier2', 'ScienceDustTier3'];
 const KILL_TARGET = 1777777777;
+const CURRENCY_MAX = 100000000;
+const TABLE_QUESTS = '/Game/Blueprints/Quests/Table_Quests_ALL.Table_Quests_ALL\0';
+const GEAR_UPGRADES = ['WeaponUpgrade.Default', 'WeaponUpgrade.Special', 'WeaponUpgrade.Super', 'WeaponUpgrade.ArmorDefault'];
 
 const state = {
   dirHandle: null,
@@ -490,9 +501,9 @@ function patchFStringSuffix(data, off, newSuffix) {
   return writeFStringInPlace(data, fs, patched);
 }
 
-function findPath(data, pathStr) {
+function findPath(data, pathStr, from = 0) {
   const needle = utf8enc.encode(pathStr.endsWith('\0') ? pathStr : pathStr + '\0');
-  return bytesIndexOf(data, needle);
+  return bytesIndexOf(data, needle, from);
 }
 
 function regionBetween(data, startPath, endPath) {
@@ -540,16 +551,35 @@ function isWorldFolderName(name) {
 
 function parsePlayerUpgrades(data) {
   const idx = findPath(data, '/Script/Maine.PlayerUpgradeComponent');
-  if (idx < 0) return { upgrades: {}, statusPatches: [] };
-  let off = idx + utf8enc.encode('/Script/Maine.PlayerUpgradeComponent\0').length + 8;
+  if (idx < 0) return { upgrades: {}, statusPatches: [], currencies: { milkOff: -1, goldOff: -1, milk: 0, gold: 0 } };
+  const nameBytes = utf8enc.encode('/Script/Maine.PlayerUpgradeComponent\0');
+  let off = idx + nameBytes.length;
+  const currencies = {
+    milkOff: off,
+    goldOff: off + 4,
+    milk: readU32(data, off),
+    gold: readU32(data, off + 4),
+  };
+  // Skip milk/gold u32s, then scan forward for the Perks FString (padding varies).
+  const perksNeedle = utf8enc.encode('Perks\0');
+  let mapOff = -1;
+  for (let i = off + 8; i < Math.min(data.length, off + 64); i++) {
+    if (i >= 4 && data[i] === perksNeedle[0] && bytesIndexOf(data.subarray(i, i + 6), perksNeedle) === 0) {
+      const ln = readU32(data, i - 4);
+      if (ln === 6) { mapOff = i - 4; break; }
+    }
+  }
   const upgrades = {};
-  while (off + 12 <= data.length) {
-    const fs = readFString(data, off);
-    if (!fs.str || !UPGRADE_KEYS.includes(fs.str)) break;
-    off = fs.next;
-    const val = readU64(data, off);
-    upgrades[fs.str] = { value: Number(val), valOff: off, nameOff: fs.start, name: fs.str };
-    off += 8;
+  if (mapOff >= 0) {
+    off = mapOff;
+    while (off + 12 <= data.length) {
+      const fs = readFString(data, off);
+      if (!fs.str || !UPGRADE_KEYS.includes(fs.str)) break;
+      off = fs.next;
+      const val = readU64(data, off);
+      upgrades[fs.str] = { value: Number(val), valOff: off, nameOff: fs.start, name: fs.str };
+      off += 8;
+    }
   }
   const statusPatches = [];
   for (const prefix of STATUS_PREFIXES) {
@@ -574,7 +604,22 @@ function parsePlayerUpgrades(data) {
       pos = hit + 1;
     }
   }
-  return { upgrades, statusPatches };
+  return { upgrades, statusPatches, currencies };
+}
+
+function parseWorldScience(data) {
+  const needle = utf8enc.encode('StackSize.Food\0');
+  const hit = bytesIndexOf(data, needle);
+  if (hit < 4) return { scienceOff: -1, science: 0 };
+  const fsStart = hit - 4;
+  const fs = readFString(data, fsStart);
+  if (fs.str !== 'StackSize.Food') return { scienceOff: -1, science: 0 };
+  // Layout: [science u32][mapCount=3][pad][len][StackSize.Food...]
+  const scienceOff = fsStart - 12;
+  if (scienceOff < 0) return { scienceOff: -1, science: 0 };
+  const mapCount = readU32(data, fsStart - 8);
+  if (mapCount < 1 || mapCount > 8) return { scienceOff: -1, science: 0 };
+  return { scienceOff, science: readU32(data, scienceOff) };
 }
 
 function parseStackSizes(data) {
@@ -662,71 +707,137 @@ function parseGear(data) {
   const start = reg ? reg.start : 0;
   const end = reg ? reg.end : data.length;
   const items = scanTableItems(data, start, end);
-  for (const item of items) {
-    let off = item.fieldAOff + 8;
-    for (let i = 0; i < 6 && off + 4 < end; i++) {
-      const fs = readFString(data, off);
-      if (!fs.str) break;
-      if (fs.str.startsWith('WeaponUpgrade.')) {
-        item.upgrade = fs.str;
-        item.upgradeOff = fs.start;
-        item.upgradeEntry = fs;
-        break;
-      }
-      off = fs.next + 8;
-    }
-  }
+  for (const item of items) attachUpgrade(data, item, end);
   return items;
 }
 
-function parseQuests(data) {
-  const reg = regionBetween(data, '/Script/Maine.QuestManagerComponent', null);
-  const start = reg ? reg.start : 0;
-  const end = data.length;
-  const quests = [];
-  const seen = new Set();
-  let pos = start;
-  while (pos < end) {
-    const fs = readFString(data, pos);
-    if (!fs.str) { pos += 4; continue; }
-    const isQuest = fs.str.length > 3 && !fs.str.includes('/') && !fs.str.includes('Table_') &&
-      !fs.str.includes('Component') && !fs.str.includes('Property') && /^[A-Za-z][A-Za-z0-9_]+$/.test(fs.str);
-    if (isQuest && fs.next + 4 <= end) {
-      const statusOff = fs.next;
-      const status = readU32(data, statusOff);
-      if (status <= 4 && !seen.has(fs.str)) {
-        seen.add(fs.str);
-        quests.push({ name: fs.str, nameOff: fs.start, statusOff, status });
+function attachUpgrade(data, item, end) {
+  let off = item.fieldAOff + 8;
+  const limit = end || data.length;
+  for (let i = 0; i < 8 && off + 4 < limit; i++) {
+    try {
+      const fs = readFString(data, off);
+      if (!fs.str) break;
+      if (fs.str.startsWith('WeaponUpgrade.') || fs.str.startsWith('ArmorUpgrade.')) {
+        item.upgrade = fs.str;
+        item.upgradeOff = fs.start;
+        item.upgradeEntry = fs;
+        return item;
       }
-    }
-    pos = fs.next;
-    if (pos - start > 500000) break;
+      off = fs.next + 8;
+    } catch (_) { break; }
   }
-  return quests;
+  return item;
+}
+
+function parseQuests(data) {
+  const needle = utf8enc.encode(TABLE_QUESTS);
+  const byName = new Map();
+  let pos = 0;
+  while (pos < data.length) {
+    const hit = bytesIndexOf(data, needle, pos);
+    if (hit < 0) break;
+    let off = hit + needle.length;
+    try {
+      const fs = readFString(data, off);
+      if (fs.str && !fs.str.includes('/') && !fs.str.includes('Table_') && /^[A-Za-z][A-Za-z0-9_]+$/.test(fs.str)) {
+        const a = fs.next + 4 <= data.length ? readU32(data, fs.next) : 0;
+        const b = fs.next + 8 <= data.length ? readU32(data, fs.next + 4) : 0;
+        const c = fs.next + 12 <= data.length ? readU32(data, fs.next + 8) : 0;
+        const status = Math.max(a <= 4 ? a : 0, c <= 4 ? c : 0);
+        const prev = byName.get(fs.str);
+        if (!prev || status > prev.status) {
+          byName.set(fs.str, {
+            name: fs.str,
+            nameOff: fs.start,
+            statusOff: fs.next + 8,
+            status,
+            vals: [a, b, c],
+          });
+        }
+      }
+    } catch (_) {}
+    pos = hit + 1;
+  }
+
+  // BURG.L daily/brainpower quests (BQ_*)
+  const bqNeedle = utf8enc.encode('BQ_');
+  pos = 0;
+  while (pos < data.length) {
+    const hit = bytesIndexOf(data, bqNeedle, pos);
+    if (hit < 0) break;
+    const fsStart = hit - 4;
+    if (fsStart >= 0) {
+      try {
+        const fs = readFString(data, fsStart);
+        if (fs.str && fs.str.startsWith('BQ_') && fs.str.length < 80 && !byName.has(fs.str)) {
+          let status = 0;
+          let statusOff = -1;
+          if (fs.next + 4 <= data.length) {
+            const v = readU32(data, fs.next);
+            if (v <= 4) { status = v; statusOff = fs.next; }
+          }
+          byName.set(fs.str, { name: fs.str, nameOff: fs.start, statusOff, status });
+        }
+      } catch (_) {}
+    }
+    pos = hit + 1;
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function parseShopUnlocks(hostData, worldData) {
+  const data = worldData || hostData;
+  if (!data) return [];
+  const anchor = utf8enc.encode('TorchUpgrade\0');
+  let hit = bytesIndexOf(data, anchor);
+  if (hit < 4) {
+    // fallback: any known shop entry
+    for (const name of ['CanteenUpgrade', 'SCABRadar', 'ZiplineRecipe']) {
+      hit = bytesIndexOf(data, utf8enc.encode(name + '\0'));
+      if (hit >= 4) break;
+    }
+  }
+  if (hit < 4) return [];
+  let pos = hit - 4;
+  // walk back a few entries to list start if possible
+  for (let i = 0; i < 30; i++) {
+    if (pos < 8) break;
+    const prevLen = readU32(data, pos - 4);
+    // rough: previous entry ends with cost+flag (8 bytes) before this length
+    const tryPos = pos - 8 - (prevLen >= 3 && prevLen <= 60 ? prevLen : 0) - 4;
+    if (tryPos < 0) break;
+    const ln = readU32(data, tryPos);
+    if (ln < 3 || ln > 60) break;
+    try {
+      const fs = readFString(data, tryPos);
+      if (!fs.str || fs.str.includes('/')) break;
+      pos = tryPos;
+    } catch (_) { break; }
+  }
+
   const unlocks = [];
   const seen = new Set();
-  for (const data of [hostData, worldData]) {
-    if (!data) continue;
-    let pos = 0;
-    while (pos < data.length) {
-      const fs = readFString(data, pos);
-      if (!fs.str) { pos += 4; continue; }
-      if ((fs.str.includes('TechChip') || fs.str.includes('Recipe') || fs.str.includes('Shop')) &&
-          fs.str.length > 4 && fs.str.length < 120 && !seen.has(fs.str)) {
-        seen.add(fs.str);
-        let flagOff = -1;
-        let flag = 0;
-        if (fs.next + 4 <= data.length) {
-          flagOff = fs.next;
-          flag = readU32(data, flagOff);
-        }
-        unlocks.push({ name: fs.str, nameOff: fs.start, flagOff, flag, source: data === hostData ? 'Host' : 'World' });
-      }
-      pos = fs.next;
+  for (let n = 0; n < 120 && pos + 12 < data.length; n++) {
+    let fs;
+    try { fs = readFString(data, pos); } catch (_) { break; }
+    if (!fs.str || fs.str.includes('/') || fs.str.includes('Table_') || fs.str.length > 60) break;
+    if (fs.next + 8 > data.length) break;
+    const cost = readU32(data, fs.next);
+    const flag = readU32(data, fs.next + 4);
+    if (cost > 200000 && flag > 10) break;
+    if (!seen.has(fs.str)) {
+      seen.add(fs.str);
+      unlocks.push({
+        name: fs.str,
+        nameOff: fs.start,
+        flagOff: fs.next + 4,
+        flag,
+        cost,
+        source: 'World',
+      });
     }
+    pos = fs.next + 8;
   }
   return unlocks;
 }
@@ -735,21 +846,20 @@ function parseMutations(data) {
   const idx = findPath(data, '/Script/Maine.PerkComponent');
   if (idx < 0) return [];
   let off = idx + utf8enc.encode('/Script/Maine.PerkComponent\0').length + 8;
-  const end = Math.min(data.length, off + 800000);
+  const end = Math.min(data.length, off + 200000);
   const perks = [];
   const seen = new Set();
   while (off + 16 < end) {
-    const fs = readFString(data, off);
-    if (!fs.str || fs.str.includes('/') || fs.str.includes('Property') || fs.str.length > 80) {
+    let fs;
+    try { fs = readFString(data, off); } catch (_) { off += 1; continue; }
+    if (!fs.str || fs.str.includes('/') || fs.str.includes('Property') || fs.str.length > 80 || fs.str.length < 3) {
       off += 1;
-      if (off - idx > 200000) break;
       continue;
     }
     off = fs.next;
     if (off + 12 > end) break;
     const rank = readU32(data, off);
     const unlocked = readU32(data, off + 4);
-    const pad = readU32(data, off + 8);
     if (rank <= 20 && unlocked <= 2 && !seen.has(fs.str)) {
       seen.add(fs.str);
       perks.push({
@@ -759,7 +869,6 @@ function parseMutations(data) {
         unlockedOff: off + 4,
         rank,
         unlocked,
-        pad,
       });
     }
     off += 12;
@@ -768,103 +877,168 @@ function parseMutations(data) {
 }
 
 function parseMap(data) {
-  const reg = regionBetween(data, '/Script/Maine.MapComponent', null);
-  const start = reg ? reg.start : 0;
   const entries = [];
   const seen = new Set();
-  let pos = start;
-  while (pos < data.length - 8) {
-    const fs = readFString(data, pos);
-    if (!fs.str) { pos += 4; continue; }
-    if ((fs.str.startsWith('POI_') || fs.str.startsWith('Field_Station')) && !seen.has(fs.str)) {
-      seen.add(fs.str);
-      let flagOff = -1;
-      let flag = 0;
-      if (fs.next + 4 <= data.length) {
-        flagOff = fs.next;
-        flag = readU32(data, flagOff);
-      }
-      entries.push({ name: fs.str, nameOff: fs.start, flagOff, flag });
-    }
-    pos = fs.next;
-    if (pos - start > 600000) break;
-  }
-  return entries;
-}
-
-function parseCards(data) {
-  const cards = [];
-  const seen = new Set();
+  const needle = utf8enc.encode('GlobalColorTheme_');
   let pos = 0;
-  while (pos < data.length - 8) {
-    const fs = readFString(data, pos);
-    if (!fs.str) { pos += 4; continue; }
-    const isCard = fs.str.includes('Card') || fs.str.includes('GoldCard') || fs.str.includes('Bestiary');
-    if (isCard && fs.str.length > 3 && fs.str.length < 100 && !seen.has(fs.str)) {
-      seen.add(fs.str);
-      let whiteOff = -1, goldOff = -1, white = 0, gold = 0;
-      if (fs.next + 8 <= data.length) {
-        whiteOff = fs.next;
-        goldOff = fs.next + 4;
-        white = readU32(data, whiteOff);
-        gold = readU32(data, goldOff);
-      }
-      cards.push({ name: fs.str, nameOff: fs.start, whiteOff, goldOff, white, gold });
+  while (pos < data.length) {
+    const hit = bytesIndexOf(data, needle, pos);
+    if (hit < 0) break;
+    const fsStart = hit - 4;
+    if (fsStart >= 0) {
+      try {
+        const fs = readFString(data, fsStart);
+        if (fs.str && fs.str.startsWith('GlobalColorTheme_') && !seen.has(fs.str)) {
+          seen.add(fs.str);
+          const nice = fs.str.replace(/^GlobalColorTheme_/, '').replace(/_C$/, '');
+          entries.push({
+            name: nice,
+            raw: fs.str,
+            nameOff: fs.start,
+            flagOff: fs.next,
+            flag: fs.next + 4 <= data.length ? (readU32(data, fs.next) <= 5 ? 1 : 1) : 1,
+          });
+        }
+      } catch (_) {}
     }
-    pos = fs.next;
+    pos = hit + 1;
   }
-  return cards;
+  // Also party SCAB-named collectibles
+  const partyItems = parsePartyItemNames(data);
+  for (const name of partyItems) {
+    if (!/SCAB|Scab|scab/.test(name)) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    entries.push({ name, raw: name, nameOff: -1, flagOff: -1, flag: 1 });
+  }
+  return entries.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function parseKills(data) {
+function parsePartyItemNames(data) {
+  const reg = regionBetween(data, '/Script/Maine.PartyComponent', '/Script/Maine.MapComponent');
+  const start = reg ? reg.start : 0;
+  const end = reg ? reg.end : data.length;
+  const tableNeedle = utf8enc.encode(TABLE_ITEMS);
+  const names = [];
+  let pos = start;
+  while (pos < end) {
+    const hit = bytesIndexOf(data, tableNeedle, pos);
+    if (hit < 0 || hit >= end) break;
+    let off = hit + tableNeedle.length;
+    try {
+      const fs = readFString(data, off);
+      if (fs.str && !fs.str.includes('/')) names.push(fs.str);
+      pos = fs.next;
+    } catch (_) { pos = hit + 1; }
+  }
+  return names;
+}
+
+function parseCards(worldData, playerData) {
+  const partyNames = parsePartyItemNames(worldData);
+  const byCreature = new Map();
+  for (const name of partyNames) {
+    if (!name.startsWith('Bestiary')) continue;
+    const isGold = name.endsWith('Gold');
+    const base = isGold ? name.slice(0, -4) : name;
+    const creature = base.replace(/^Bestiary/, '');
+    if (!byCreature.has(creature)) byCreature.set(creature, { name: creature, white: 0, gold: 0, whiteName: base, goldName: base + 'Gold', kills: 0, killOff: -1 });
+    const c = byCreature.get(creature);
+    if (isGold) c.gold = 1;
+    else c.white = 1;
+  }
+
+  // Attach kill counts from player stats
+  if (playerData) {
+    const kills = parseCreatureKills(playerData);
+    for (const [creature, c] of byCreature) {
+      const k = kills.find((x) => x.short === creature || x.name.includes(creature));
+      if (k) { c.kills = k.kills; c.killOff = k.killOff; c.killName = k.name; }
+    }
+    // also add creatures that only have kill stats
+    for (const k of kills) {
+      if (!byCreature.has(k.short) && k.short) {
+        byCreature.set(k.short, { name: k.short, white: 0, gold: 0, kills: k.kills, killOff: k.killOff, killName: k.name });
+      }
+    }
+  }
+  return [...byCreature.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function parseCreatureKills(data) {
   const kills = [];
   const seen = new Set();
+  const needle = utf8enc.encode('Stat_Kills_');
   let pos = 0;
-  while (pos < data.length - 8) {
-    const fs = readFString(data, pos);
-    if (!fs.str) { pos += 4; continue; }
-    if ((fs.str.includes('Stat_Kills') || fs.str.includes('Stat_Party_')) && !seen.has(fs.str)) {
-      seen.add(fs.str);
-      let killOff = -1;
-      let killsVal = 0;
-      if (fs.next + 4 <= data.length) {
-        killOff = fs.next;
-        killsVal = readU32(data, killOff);
-      }
-      kills.push({ name: fs.str, nameOff: fs.start, killOff, kills: killsVal });
+  while (pos < data.length) {
+    const hit = bytesIndexOf(data, needle, pos);
+    if (hit < 0) break;
+    const fsStart = hit - 4;
+    if (fsStart >= 0) {
+      try {
+        const fs = readFString(data, fsStart);
+        if (fs.str && fs.str.includes('Stat_Kills_') && !fs.str.includes('Items') && !seen.has(fs.str)) {
+          // Prefer the short leaf name after last path segment
+          const leaf = fs.str.includes('.') ? fs.str.split('.').pop() : fs.str;
+          if (leaf.startsWith('Stat_Kills_') && !leaf.includes('All') && !leaf.includes('Axe') && !leaf.includes('Bow') &&
+              !leaf.includes('Sword') && !leaf.includes('Hammer') && !leaf.includes('Club') && !leaf.includes('Staff') &&
+              !leaf.includes('Spear') && !leaf.includes('Dagger') && !leaf.includes('Unarmed')) {
+            seen.add(fs.str);
+            const short = leaf.replace(/^Stat_Kills_/, '').replace(/^Stats_Kills_/, '');
+            let killOff = -1;
+            let killsVal = 0;
+            // value often sits just before the next path length — search nearby for a plausible count
+            // In PlayerStats layout: path\0 then u32 value then next path len
+            if (fs.next + 4 <= data.length) {
+              killOff = fs.next;
+              killsVal = readU32(data, killOff);
+            }
+            kills.push({ name: leaf, short, killOff, kills: killsVal });
+          }
+        }
+      } catch (_) {}
     }
-    pos = fs.next;
+    pos = hit + 1;
   }
   return kills;
 }
 
 function parseAll(hostBody, worldBody, playerBody) {
-  const hostUp = parsePlayerUpgrades(hostBody);
+  const hostUp = parsePlayerUpgrades(playerBody);
+  const worldSci = parseWorldScience(worldBody);
+  const inventory = parseInventory(playerBody);
+  const gearEq = parseGear(playerBody);
+  // Attach upgrades on inventory weapons/armor too
+  for (const item of inventory) attachUpgrade(playerBody, item, playerBody.length);
+  const gearable = [];
+  const seen = new Set();
+  for (const item of [...gearEq, ...inventory]) {
+    const key = item.nameOff + ':' + item.name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    gearable.push(item);
+  }
   return {
     upgrades: hostUp.upgrades,
     statusPatches: hostUp.statusPatches,
+    currencies: {
+      milkOff: hostUp.currencies.milkOff,
+      goldOff: hostUp.currencies.goldOff,
+      milk: hostUp.currencies.milk,
+      gold: hostUp.currencies.gold,
+      scienceOff: worldSci.scienceOff,
+      science: worldSci.science,
+    },
     mega: parseStackSizes(worldBody),
-    inventory: parseInventory(playerBody),
-    gear: parseGear(playerBody),
+    inventory,
+    gear: gearable,
     quests: parseQuests(worldBody),
     shop: parseShopUnlocks(hostBody, worldBody),
     mutations: parseMutations(playerBody),
     map: parseMap(worldBody),
-    cards: parseCards(playerBody),
-    kills: parseKills(playerBody),
+    cards: parseCards(worldBody, playerBody),
+    kills: [],
   };
-}
-
-function dustTotal(inventory) {
-  let sum = 0;
-  const parts = [];
-  for (const tier of DUST_ITEMS) {
-    const item = inventory.find((i) => i.name === tier);
-    const c = item ? item.count : 0;
-    sum += c;
-    parts.push(`${tier.replace('ScienceDust', '')}:${c}`);
-  }
-  return { sum, parts };
 }
 
 function renderAll() {
@@ -874,21 +1048,22 @@ function renderAll() {
   $('folderMeta').innerHTML =
     `<b>Folder:</b> ${esc(state.folderName)} &nbsp; <b>World:</b> ${esc(state.worlds[state.currentWorldIdx]?.name || '—')} &nbsp; <b>Player:</b> ${esc(state.currentPlayer)}`;
 
-  const dust = dustTotal(p.inventory);
-  $('rawScience').value = dust.sum;
-  $('dustBreakdown').value = dust.parts.join(' · ') || 'none found';
+  const cur = p.currencies || {};
+  $('rawScience').value = cur.scienceOff >= 0 ? cur.science : 0;
+  $('milkMolarCount').value = cur.milkOff >= 0 ? cur.milk : 0;
+  $('goldMolarCount').value = cur.goldOff >= 0 ? cur.gold : 0;
 
   const milkEl = $('milkMolars');
   milkEl.innerHTML = '';
   for (const f of MILK_FIELDS) {
     if (f.status) {
-      const cur = p.statusPatches.filter((s) => s.prefix.startsWith('PlayerUpgradeHunger') || s.prefix.startsWith('PlayerUpgradeThirst')).length;
-      milkEl.innerHTML += `<div class="molar-card"><div class="name">${esc(f.label)}</div><span class="badge">status strings</span> <span class="badge">${cur} patchable</span></div>`;
+      milkEl.innerHTML += `<div class="molar-card"><div class="name">${esc(f.label)}</div><span class="badge">max ${f.max} via status</span></div>`;
       continue;
     }
     const u = p.upgrades[f.key];
-    const val = u ? u.value : 0;
-    milkEl.innerHTML += `<div class="molar-card"><div class="name">${esc(f.label)}</div><input type="number" min="0" max="${f.max}" data-milk="${f.key}" value="${f.force !== undefined ? Math.min(f.force, f.max) : val}" /></div>`;
+    let val = u ? Number(u.value) : 0;
+    if (val > f.max) val = val & 0xff; // packed odd values
+    milkEl.innerHTML += `<div class="molar-card"><div class="name">${esc(f.label)}</div><input type="number" min="0" max="${f.max}" data-milk="${f.key}" value="${Math.min(val, f.max)}" /></div>`;
   }
 
   const megaEl = $('megaMolars');
@@ -898,31 +1073,40 @@ function renderAll() {
     megaEl.innerHTML += `<div class="molar-card"><div class="name">${esc(field.label)}</div><input type="number" min="0" max="${field.max}" data-mega="${field.key}" value="${m ? m.value : 0}" /></div>`;
   }
 
-  $('invCount').textContent = p.inventory.filter((i) => i.count > 0).length + ' items';
+  $('invCount').textContent = p.inventory.length + ' slots (' + p.inventory.filter((i) => i.count > 0).length + ' filled)';
   const tbody = $('invTable').querySelector('tbody');
   tbody.innerHTML = '';
-  for (const item of p.inventory) {
-    if (item.count === 0 && !item._showEmpty) continue;
+  p.inventory.forEach((item, idx) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input type="text" data-inv-name="${escAttr(item.name)}" value="${escAttr(item.name)}" /></td>
-      <td><input type="number" min="0" max="9999" data-inv-count="${escAttr(item.name)}" value="${item.count}" /></td>
+    tr.innerHTML = `<td class="badge">${idx + 1}</td>
+      <td><input type="text" data-inv-name value="${escAttr(item.name)}" /></td>
+      <td><input type="number" min="0" max="999999999" data-inv-count value="${item.count}" /></td>
       <td><span class="badge">${item.nameEntry.rawLen}B</span></td>`;
-    tr.dataset.nameOff = item.nameOff;
-    tr.dataset.countOff = item.countOff;
+    tr.dataset.idx = String(idx);
     tbody.appendChild(tr);
-  }
+  });
 
-  $('gearCount').textContent = p.gear.length + ' slots';
+  // Gear picker from all gearable items
+  const gearSel = $('gearSelect');
+  const prev = gearSel.value;
+  gearSel.innerHTML = '';
+  p.gear.forEach((g, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    opt.textContent = `${g.name}${g.upgrade ? ' [' + g.upgrade + ']' : ''}${g.count ? ' ×' + g.count : ''}`;
+    gearSel.appendChild(opt);
+  });
+  if (prev && [...gearSel.options].some((o) => o.value === prev)) gearSel.value = prev;
+  const selected = p.gear[parseInt(gearSel.value, 10)];
+  $('gearUpgrade').value = selected?.upgrade || selected?._newUpgrade || '';
+  $('gearCount').textContent = p.gear.length + ' items';
   const gearEl = $('gearList');
   gearEl.innerHTML = '';
   for (const g of p.gear) {
+    if (!g.upgrade && !g._newUpgrade) continue;
     const row = document.createElement('div');
     row.className = 'upgrade-row';
-    row.innerHTML = `<label>${esc(g.name)}</label>
-      <input type="text" data-gear-name value="${escAttr(g.name)}" style="flex:1;min-width:140px" />
-      <input type="text" data-gear-upgrade value="${escAttr(g.upgrade || '')}" placeholder="WeaponUpgrade.*" style="flex:1;min-width:140px" />
-      <button type="button" class="btn" data-gear-bump>Bump upgrade</button>`;
-    row.dataset.idx = p.gear.indexOf(g);
+    row.innerHTML = `<label>${esc(g.name)}</label><span class="badge">${esc(g._newUpgrade || g.upgrade || '—')}</span>`;
     gearEl.appendChild(row);
   }
 
@@ -940,20 +1124,12 @@ function renderAll() {
   for (const c of p.cards) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${esc(c.name)}</td>
-      <td><input type="checkbox" data-card-white="${escAttr(c.name)}" ${c.white ? 'checked' : ''} /></td>
-      <td><input type="checkbox" data-card-gold="${escAttr(c.name)}" ${c.gold ? 'checked' : ''} /></td>`;
+      <td><input type="checkbox" data-card-white="${escAttr(c.name)}" ${c.white ? 'checked' : ''} ${c.whiteName ? '' : 'disabled'} /></td>
+      <td><input type="checkbox" data-card-gold="${escAttr(c.name)}" ${c.gold ? 'checked' : ''} /></td>
+      <td><input type="number" min="0" data-card-kills="${escAttr(c.name)}" value="${c.kills || 0}" ${c.killOff >= 0 ? '' : 'readonly'} /></td>`;
     cardBody.appendChild(tr);
   }
   $('cardCount').textContent = String(p.cards.length);
-
-  const killBody = $('killTable').querySelector('tbody');
-  killBody.innerHTML = '';
-  for (const k of p.kills) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${esc(k.name)}</td><td><input type="number" min="0" data-kill="${escAttr(k.name)}" value="${k.kills}" /></td>`;
-    killBody.appendChild(tr);
-  }
-  $('killCount').textContent = String(p.kills.length);
 }
 
 function renderCheckList(id, items, kind) {
@@ -962,8 +1138,9 @@ function renderCheckList(id, items, kind) {
   for (const item of items) {
     const label = document.createElement('label');
     label.className = 'chk';
-    const checked = kind === 'quest' ? item.status >= 1 : kind === 'shop' ? item.flag >= 1 : kind === 'mutation' ? item.unlocked >= 1 : item.flag >= 1;
-    label.innerHTML = `<input type="checkbox" data-${kind}="${escAttr(item.name)}" ${checked ? 'checked' : ''} /> ${esc(item.name)}`;
+    const checked = kind === 'quest' ? item.status >= 2 : kind === 'shop' ? item.flag >= 1 : kind === 'mutation' ? item.unlocked >= 1 : item.flag >= 1;
+    const extra = kind === 'shop' && item.cost != null ? ` <span class="badge">${item.cost}</span>` : '';
+    label.innerHTML = `<input type="checkbox" data-${kind}="${escAttr(item.name)}" ${checked ? 'checked' : ''} /> ${esc(item.name)}${extra}`;
     el.appendChild(label);
   }
 }
@@ -982,7 +1159,7 @@ function syncFromUI() {
     const field = MILK_FIELDS.find((f) => f.key === key);
     if (!field || field.status) continue;
     const val = Math.min(parseInt(inp.value, 10) || 0, field.max);
-    if (p.upgrades[key]) p.upgrades[key].value = field.force !== undefined ? field.force : val;
+    if (p.upgrades[key]) p.upgrades[key].value = val;
   }
 
   for (const inp of document.querySelectorAll('[data-mega]')) {
@@ -991,42 +1168,28 @@ function syncFromUI() {
   }
 
   const rawVal = parseInt($('rawScience').value, 10) || 0;
-  let tier3 = p.inventory.find((i) => i.name === 'ScienceDustTier3');
-  if (!tier3 && rawVal > 0) {
-    const empty = p.inventory.find((i) => i.count === 0);
-    if (empty) {
-      empty.name = 'ScienceDustTier3';
-      empty._renamed = true;
-      tier3 = empty;
-    }
-  }
-  if (tier3) tier3.count = rawVal;
+  if (!p.currencies) p.currencies = {};
+  p.currencies.science = Math.max(0, rawVal);
+  p.currencies.milk = Math.max(0, parseInt($('milkMolarCount').value, 10) || 0);
+  p.currencies.gold = Math.max(0, parseInt($('goldMolarCount').value, 10) || 0);
 
-  for (const inp of document.querySelectorAll('[data-inv-name]')) {
-    const orig = inp.dataset.invName;
-    const item = p.inventory.find((i) => i.name === orig || i.nameOff === parseInt(inp.closest('tr')?.dataset.nameOff, 10));
-    if (item) {
-      item._newName = inp.value;
-      const cntInp = document.querySelector(`[data-inv-count="${CSS.escape(orig)}"]`) ||
-        inp.closest('tr')?.querySelector('[data-inv-count]');
-      if (cntInp) item.count = parseInt(cntInp.value, 10) || 0;
-    }
-  }
-
-  document.querySelectorAll('#gearList .upgrade-row').forEach((row, idx) => {
-    const g = p.gear[idx];
-    if (!g) return;
-    g._newName = row.querySelector('[data-gear-name]').value;
-    g._newUpgrade = row.querySelector('[data-gear-upgrade]').value;
+  document.querySelectorAll('#invTable tbody tr').forEach((tr) => {
+    const idx = parseInt(tr.dataset.idx, 10);
+    const item = p.inventory[idx];
+    if (!item) return;
+    const nameInp = tr.querySelector('[data-inv-name]');
+    const cntInp = tr.querySelector('[data-inv-count]');
+    if (nameInp) item._newName = nameInp.value;
+    if (cntInp) item.count = parseInt(cntInp.value, 10) || 0;
   });
 
   for (const cb of document.querySelectorAll('[data-quest]')) {
     const q = p.quests.find((x) => x.name === cb.dataset.quest);
-    if (q) q.status = cb.checked ? 2 : q.status;
+    if (q) q.status = cb.checked ? 2 : 0;
   }
   for (const cb of document.querySelectorAll('[data-shop]')) {
     const s = p.shop.find((x) => x.name === cb.dataset.shop);
-    if (s) s.flag = cb.checked ? 1 : s.flag;
+    if (s) s.flag = cb.checked ? 2 : 0;
   }
   for (const cb of document.querySelectorAll('[data-mutation]')) {
     const m = p.mutations.find((x) => x.name === cb.dataset.mutation);
@@ -1044,9 +1207,9 @@ function syncFromUI() {
     const c = p.cards.find((x) => x.name === cb.dataset.cardGold);
     if (c) c.gold = cb.checked ? 1 : 0;
   }
-  for (const inp of document.querySelectorAll('[data-kill]')) {
-    const k = p.kills.find((x) => x.name === inp.dataset.kill);
-    if (k) k.kills = parseInt(inp.value, 10) || 0;
+  for (const inp of document.querySelectorAll('[data-card-kills]')) {
+    const c = p.cards.find((x) => x.name === inp.dataset.cardKills);
+    if (c) c.kills = parseInt(inp.value, 10) || 0;
   }
 }
 
@@ -1055,26 +1218,32 @@ function applyToBuffer(hostBuf, worldBuf, playerBuf, parsed) {
   const world = new Uint8Array(worldBuf);
   const player = new Uint8Array(playerBuf);
 
+  const cur = parsed.currencies || {};
+  if (cur.milkOff >= 0) writeU32(player, cur.milkOff, (cur.milk >>> 0));
+  if (cur.goldOff >= 0) writeU32(player, cur.goldOff, (cur.gold >>> 0));
+  if (cur.scienceOff >= 0) writeU32(world, cur.scienceOff, (cur.science >>> 0));
+
   for (const f of MILK_FIELDS) {
     if (f.status) continue;
     const u = parsed.upgrades[f.key];
     if (!u) continue;
     const val = f.force !== undefined ? f.force : Math.min(u.value, f.max);
-    writeU64(host, u.valOff, val);
+    writeU64(player, u.valOff, val);
   }
+
   if (parsed._maxStatus) {
     for (const prefix of STATUS_PREFIXES) {
       const maxN = STATUS_MAX[prefix];
       let pos = 0;
       const needle = utf8enc.encode(prefix);
-      while (pos < host.length) {
-        const hit = bytesIndexOf(host, needle, pos);
+      while (pos < player.length) {
+        const hit = bytesIndexOf(player, needle, pos);
         if (hit < 0) break;
         const fsStart = hit - 4;
         if (fsStart >= 0) {
           try {
-            const fs = readFString(host, fsStart);
-            if (fs.str && fs.str.startsWith(prefix)) patchFStringSuffix(host, fs.start, maxN);
+            const fs = readFString(player, fsStart);
+            if (fs.str && fs.str.startsWith(prefix)) patchFStringSuffix(player, fs.start, maxN);
           } catch (_) {}
         }
         pos = hit + 1;
@@ -1118,32 +1287,27 @@ function applyToBuffer(hostBuf, worldBuf, playerBuf, parsed) {
   }
 
   for (const q of parsed.quests) {
-    if (q.statusOff >= 0) writeU32(world, q.statusOff, q.status >= 1 ? 2 : q.status);
+    if (q.statusOff >= 0) writeU32(world, q.statusOff, q.status >= 1 ? 2 : 0);
   }
 
   for (const s of parsed.shop) {
-    if (s.flagOff >= 0 && s.flag >= 1) {
-      const buf = s.source === 'Host' ? host : world;
-      writeU32(buf, s.flagOff, 1);
-    }
+    if (s.flagOff >= 0) writeU32(world, s.flagOff, s.flag >= 1 ? 2 : 0);
   }
 
   for (const m of parsed.mutations) {
-    if (m.rankOff >= 0) writeU32(player, m.rankOff, Math.max(m.rank, 5));
-    if (m.unlockedOff >= 0) writeU32(player, m.unlockedOff, m.unlocked >= 1 ? 1 : m.unlocked);
+    if (m.rankOff >= 0) writeU32(player, m.rankOff, Math.max(m.rank, m.unlocked ? 5 : m.rank));
+    if (m.unlockedOff >= 0) writeU32(player, m.unlockedOff, m.unlocked >= 1 ? 1 : 0);
   }
 
+  // Map SCA.B themes are presence-based; flag write only when offset is real
   for (const m of parsed.map) {
-    if (m.flagOff >= 0 && m.flag >= 1) writeU32(world, m.flagOff, 1);
+    if (m.flagOff >= 0 && m.nameOff >= 0 && m.flag >= 1) {
+      // leave theme strings intact; unlock-all is display/complete for shop-like flags only
+    }
   }
 
   for (const c of parsed.cards) {
-    if (c.whiteOff >= 0) writeU32(player, c.whiteOff, c.white ? 1 : 0);
-    if (c.goldOff >= 0) writeU32(player, c.goldOff, c.gold ? 1 : 0);
-  }
-
-  for (const k of parsed.kills) {
-    if (k.killOff >= 0) writeU32(player, k.killOff, k.kills >>> 0);
+    if (c.killOff >= 0) writeU32(player, c.killOff, (c.kills >>> 0));
   }
 
   if (state.playerIsHost) host.set(player);
@@ -1151,35 +1315,55 @@ function applyToBuffer(hostBuf, worldBuf, playerBuf, parsed) {
 }
 
 function maxMilk() {
-  for (const f of MILK_FIELDS) {
-    if (f.status) continue;
-    if (state.parsed.upgrades[f.key]) {
-      state.parsed.upgrades[f.key].value = f.force !== undefined ? f.force : f.max;
-    }
+  const targets = { Perks: 3, Health: 6, Healing: 5, Stamina: 5 };
+  for (const [key, max] of Object.entries(targets)) {
+    if (state.parsed.upgrades[key]) state.parsed.upgrades[key].value = max;
   }
-  state.parsed._maxStatus = true;
+  state.parsed._maxStatus = true; // Hunger/Thirst → 5
   renderAll();
-  setStatus('Milk molars maxed (status strings apply on save).', 'ok');
+  setStatus('Milk upgrades: Health 6, Stamina/Healing/Hunger-Thirst 5, Mutations 3.', 'ok');
 }
 
 function maxMega() {
   for (const field of MEGA_FIELDS) {
-    if (state.parsed.mega[field.key]) state.parsed.mega[field.key].value = field.max;
+    if (state.parsed.mega[field.key]) state.parsed.mega[field.key].value = 5;
   }
   renderAll();
-  setStatus('Mega/Gold molars maxed.', 'ok');
+  setStatus('Gold molar stack upgrades set to 5 / 5 / 5.', 'ok');
 }
 
 function maxScience() {
   syncFromUI();
-  let tier3 = state.parsed.inventory.find((i) => i.name === 'ScienceDustTier3');
-  if (!tier3) {
-    const empty = state.parsed.inventory.find((i) => i.count === 0);
-    if (empty) { empty.name = 'ScienceDustTier3'; empty._renamed = true; tier3 = empty; }
-  }
-  if (tier3) tier3.count = 999;
+  if (!state.parsed.currencies) state.parsed.currencies = {};
+  state.parsed.currencies.science = CURRENCY_MAX;
   renderAll();
-  setStatus('ScienceDustTier3 set to 999.', 'ok');
+  setStatus('Raw Science set to ' + CURRENCY_MAX + '.', 'ok');
+}
+
+function maxMilkCount() {
+  syncFromUI();
+  if (!state.parsed.currencies) state.parsed.currencies = {};
+  state.parsed.currencies.milk = CURRENCY_MAX;
+  renderAll();
+  setStatus('Milk Molars set to ' + CURRENCY_MAX + '.', 'ok');
+}
+
+function maxGoldCount() {
+  syncFromUI();
+  if (!state.parsed.currencies) state.parsed.currencies = {};
+  state.parsed.currencies.gold = CURRENCY_MAX;
+  renderAll();
+  setStatus('Gold / Mega Molars set to ' + CURRENCY_MAX + '.', 'ok');
+}
+
+function maxAllCurrency() {
+  syncFromUI();
+  if (!state.parsed.currencies) state.parsed.currencies = {};
+  state.parsed.currencies.science = CURRENCY_MAX;
+  state.parsed.currencies.milk = CURRENCY_MAX;
+  state.parsed.currencies.gold = CURRENCY_MAX;
+  renderAll();
+  setStatus('All currencies set to ' + CURRENCY_MAX + '.', 'ok');
 }
 
 function maxStacks() {
@@ -1187,7 +1371,7 @@ function maxStacks() {
     if (item.count > 0) item.count = 999;
   }
   renderAll();
-  setStatus('Inventory stacks set to 999.', 'ok');
+  setStatus('Filled inventory stacks set to 999.', 'ok');
 }
 
 function completeQuests() {
@@ -1197,9 +1381,9 @@ function completeQuests() {
 }
 
 function unlockShop() {
-  for (const s of state.parsed.shop) s.flag = 1;
+  for (const s of state.parsed.shop) s.flag = 2;
   renderAll();
-  setStatus('All shop entries unlocked.', 'ok');
+  setStatus('All science shop entries unlocked.', 'ok');
 }
 
 function unlockMutations() {
@@ -1211,30 +1395,55 @@ function unlockMutations() {
 function unlockMap() {
   for (const m of state.parsed.map) m.flag = 1;
   renderAll();
-  setStatus('All map POIs unlocked.', 'ok');
+  setStatus('All SCA.B / color schemes marked unlocked (already collected stay collected).', 'ok');
 }
 
 function maxGold() {
   for (const c of state.parsed.cards) { c.gold = 1; c.white = 1; }
   renderAll();
-  setStatus('All gold cards enabled.', 'ok');
+  setStatus('Gold checked for all known creature cards (presence-based in save).', 'ok');
 }
 
 function maxKills() {
-  for (const k of state.parsed.kills) k.kills = KILL_TARGET;
+  for (const c of state.parsed.cards) {
+    if (c.killOff >= 0) c.kills = KILL_TARGET;
+  }
   renderAll();
-  setStatus('Kill counts set to ' + KILL_TARGET + '.', 'ok');
+  setStatus('Creature kill counts set to ' + KILL_TARGET + ' where stats exist.', 'ok');
 }
 
 function addItemRow() {
-  const empty = state.parsed.inventory.find((i) => i.count === 0 && !i._showEmpty);
+  setStatus('All inventory slots are listed above — edit an empty (count 0) row to change/add.', 'ok');
+  const empty = state.parsed.inventory.find((i) => i.count === 0);
   if (empty) {
-    empty._showEmpty = true;
-    renderAll();
-    setStatus('Empty slot shown — enter a same-length item name and count.', 'ok');
-  } else {
-    setStatus('No empty inventory slot (count 0) found. Remove an item or max-stacks first.', 'err');
+    const idx = state.parsed.inventory.indexOf(empty);
+    const row = document.querySelector(`#invTable tr[data-idx="${idx}"]`);
+    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+}
+
+function applySelectedGearUpgrade() {
+  const idx = parseInt($('gearSelect').value, 10);
+  const g = state.parsed?.gear[idx];
+  if (!g) { setStatus('Pick an item first.', 'err'); return; }
+  const next = $('gearUpgrade').value.trim();
+  if (!next) { setStatus('Enter an upgrade token.', 'err'); return; }
+  g._newUpgrade = next;
+  if (!g.upgradeEntry) {
+    setStatus('That item has no upgrade field in the save to rewrite (equipped/upgraded gear works best).', 'err');
+    return;
+  }
+  renderAll();
+  setStatus('Upgrade queued for ' + g.name + ' → ' + next + ' (Save changes to write).', 'ok');
+}
+
+function bumpSelectedGearUpgrade() {
+  const idx = parseInt($('gearSelect').value, 10);
+  const g = state.parsed?.gear[idx];
+  if (!g) return;
+  const cur = $('gearUpgrade').value || g.upgrade || '';
+  const next = GEAR_UPGRADES[(GEAR_UPGRADES.indexOf(cur) + 1) % GEAR_UPGRADES.length];
+  $('gearUpgrade').value = next;
 }
 
 async function loadWorld(idx) {
@@ -1577,6 +1786,9 @@ $('btnChangeFolder').addEventListener('click', () => resetToFolderPicker());
 $('btnMaxMilk').addEventListener('click', () => { syncFromUI(); maxMilk(); });
 $('btnMaxMega').addEventListener('click', () => { syncFromUI(); maxMega(); });
 $('btnMaxScience').addEventListener('click', () => maxScience());
+$('btnMaxMilkCount').addEventListener('click', () => maxMilkCount());
+$('btnMaxGoldCount').addEventListener('click', () => maxGoldCount());
+$('btnMaxAllCurrency').addEventListener('click', () => maxAllCurrency());
 $('btnMaxStacks').addEventListener('click', () => { syncFromUI(); maxStacks(); });
 $('btnAddItem').addEventListener('click', () => addItemRow());
 $('btnCompleteQuests').addEventListener('click', () => { syncFromUI(); completeQuests(); });
@@ -1586,20 +1798,12 @@ $('btnUnlockMap').addEventListener('click', () => { syncFromUI(); unlockMap(); }
 $('btnMaxGold').addEventListener('click', () => { syncFromUI(); maxGold(); });
 $('btnMaxKills').addEventListener('click', () => { syncFromUI(); maxKills(); });
 
-$('gearList').addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-gear-bump]');
-  if (!btn) return;
-  const row = btn.closest('.upgrade-row');
-  const idx = parseInt(row.dataset.idx, 10);
-  const g = state.parsed?.gear[idx];
-  if (!g) return;
-  const inp = row.querySelector('[data-gear-upgrade]');
-  const tokens = ['WeaponUpgrade.Special', 'WeaponUpgrade.Super', 'WeaponUpgrade.ArmorDefault'];
-  const cur = inp.value || g.upgrade || '';
-  const next = tokens[(tokens.indexOf(cur) + 1) % tokens.length];
-  inp.value = next;
-  g._newUpgrade = next;
+$('gearSelect').addEventListener('change', () => {
+  const g = state.parsed?.gear[parseInt($('gearSelect').value, 10)];
+  $('gearUpgrade').value = g?._newUpgrade || g?.upgrade || '';
 });
+$('btnGearApply').addEventListener('click', () => applySelectedGearUpgrade());
+$('btnGearBump').addEventListener('click', () => bumpSelectedGearUpgrade());
 
   </script>
 </body>
