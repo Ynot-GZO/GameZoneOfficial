@@ -1,7 +1,6 @@
-UPLOAD THESE FILES TO THE ROOT of your GitHub repo (Ynot-GZO/GameZoneOfficial):
-Do NOT put them in folders. Replace existing files when asked.
+Upload EVERYTHING in this folder to your GitHub repo ROOT (not in subfolders).
 
-REQUIRED (hub + all editors):
+Required:
   index.html
   bl4-editor.html
   bl4.master.json.gz
@@ -13,11 +12,6 @@ REQUIRED (hub + all editors):
   genzero-app.js
   megabonk-editor.html
   cms2018-editor.html
+  cms2021-editor.html
 
-Optional (button covers already embedded in index.html):
-  assets/covers/  (not required if images are embedded)
-
-After upload, hard-refresh:
-  https://ynot-gzo.github.io/GameZoneOfficial/
-
-Local testing: open index.html from the Save Editor GZO folder (same folder as all *-editor.html files).
+Then hard-refresh the site.

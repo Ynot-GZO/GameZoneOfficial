@@ -60,6 +60,15 @@
       color: var(--accent);
     }
     .brand p { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.92rem; }
+    .brand .created-by {
+      margin: 0.45rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .brand .created-by strong { color: var(--text); font-weight: 600; }
+    .brand .created-by a { color: var(--accent); font-weight: 700; text-decoration: underline; }
+    .brand .created-by a:hover { color: #fff; }
     .btn {
       appearance: none; border: 1px solid var(--line); background: rgba(255,255,255,0.04);
       color: var(--text); border-radius: 8px; padding: 0.55rem 0.9rem; font: inherit; font-weight: 600;
@@ -208,7 +217,7 @@
     <div class="topbar">
       <div class="brand">
         <h1>Generation Zero Save Editor</h1>
-        <p>GZO · level / skills / inventory / rarity swap</p>
+        <p class="created-by">Created by <strong>Ynot</strong> — Have any questions or need help? Click the link to join Discord: <a href="https://discord.gg/4hGKAHdvp6" target="_blank" rel="noopener noreferrer">GZO</a></p>
       </div>
     </div>
 
@@ -328,7 +337,6 @@
       </div>
     </div>
 
-    <p class="credit created-by">Created by <strong>Ynot</strong> — Have any questions or need help? Click the link to join Discord: <a href="https://discord.gg/4hGKAHdvp6" target="_blank" rel="noopener noreferrer">GZO</a></p>
   </div>
 
   <script src="genzero-app.js"></script>

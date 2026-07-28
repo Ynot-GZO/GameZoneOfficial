@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GZO - Car Mechanic Simulator 2021 Save Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #101214;
+      --bg2: #171a1d;
+      --panel: #1c2126;
+      --panel2: #232a31;
+      --line: #323b45;
+      --text: #eef2f6;
+      --muted: #9aa6b2;
+      --accent: #f0a04b;
+      --accent2: #8ea8c3;
+      --danger: #ef7a6d;
+      --ok: #7cb87a;
+      --radius: 12px;
+      --font: "DM Sans", system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(ellipse 70% 45% at 50% -10%, rgba(240, 160, 75, 0.1), transparent 55%),
+        radial-gradient(ellipse 50% 35% at 90% 20%, rgba(142, 168, 195, 0.06), transparent 50%),
+        linear-gradient(180deg, #14181c 0%, var(--bg) 100%);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 1.25rem 1.2rem 3rem; }
+    .site-back-link {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      margin-bottom: 14px; text-decoration: none; font-weight: 600; font-size: 0.92rem;
+      color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+      background: var(--panel); padding: 7px 14px;
+    }
+    .site-back-link:hover { color: var(--text); border-color: var(--accent); }
+    .topbar { margin-bottom: 1.1rem; }
+    .brand h1 {
+      margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700;
+      letter-spacing: -0.02em; color: var(--text);
+    }
+    .brand h1 span { color: var(--accent); }
+    .btn {
+      appearance: none; border: 1px solid var(--line); background: var(--panel2);
+      color: var(--text); border-radius: 9px; padding: 0.55rem 0.9rem; font: inherit; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+    }
+    .btn:hover { border-color: #4a5663; background: #2a323b; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: rgba(240, 160, 75, 0.14); border-color: rgba(240, 160, 75, 0.45); color: #ffe8cc; }
+    .btn-primary:hover { background: rgba(240, 160, 75, 0.22); }
+    .btn-ok { border-color: rgba(124, 184, 122, 0.4); color: #d8ffe0; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 1.05rem 1.15rem; margin-bottom: 1rem;
+    }
+    .drop {
+      border: 1.5px dashed #3d4854; border-radius: var(--radius);
+      padding: 1.6rem 1.1rem; text-align: center; background: rgba(0,0,0,0.18); cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop:hover, .drop.drag { border-color: var(--accent); background: rgba(240, 160, 75, 0.06); }
+    .drop strong { display: block; color: var(--accent); font-size: 1.05rem; margin-bottom: 0.4rem; }
+    .drop .sub { color: var(--muted); font-size: 0.92rem; line-height: 1.45; }
+    .drop input { display: none; }
+    .steps {
+      margin-top: 1rem; display: grid; gap: 0.55rem;
+      color: var(--muted); font-size: 0.9rem; line-height: 1.45;
+    }
+    .steps div { padding-left: 0.1rem; }
+    .steps b { color: var(--text); font-weight: 600; }
+    .path {
+      margin-top: 0.85rem; font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+      background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 0.65rem 0.75rem;
+      word-break: break-all;
+    }
+    .meta { display: grid; gap: 0.3rem; font-size: 0.88rem; color: var(--muted); }
+    .meta b { color: var(--text); font-weight: 600; }
+    .status { margin: 0.65rem 0 1rem; font-size: 0.92rem; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--danger); }
+    .tabs {
+      display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.9rem;
+      padding: 0.3rem; background: var(--bg2); border: 1px solid var(--line); border-radius: 999px;
+    }
+    .tab {
+      border: 0; background: transparent; color: var(--muted);
+      border-radius: 999px; padding: 0.45rem 0.95rem; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: #1a1208; background: var(--accent); }
+    .view { display: none; }
+    .view.active { display: block; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.28rem; font-weight: 500; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 0.75rem; }
+    input[type="number"], input[type="text"], select {
+      width: 100%; border: 1px solid var(--line); background: var(--bg2); color: var(--text);
+      border-radius: 8px; padding: 0.55rem 0.65rem; font: inherit;
+    }
+    input:focus, select:focus { outline: 2px solid rgba(240, 160, 75, 0.35); border-color: var(--accent); }
+    .hint { color: var(--muted); font-size: 0.88rem; margin: 0 0 0.85rem; line-height: 1.45; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.85rem;
+      padding: 0.75rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    }
+    .grid-checks {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.3rem;
+      max-height: 420px; overflow: auto; padding: 0.45rem; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--bg2);
+    }
+    .chk { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.4rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+    .chk:hover { background: rgba(255,255,255,0.04); }
+    .chk input { accent-color: var(--accent); flex-shrink: 0; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .data-table th, .data-table td { border-bottom: 1px solid var(--line); padding: 0.45rem 0.4rem; text-align: left; }
+    .data-table th { color: var(--muted); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: var(--panel); }
+    .data-table input[type="number"] { min-width: 0; padding: 0.35rem 0.45rem; font-size: 0.85rem; }
+    .table-wrap { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
+    .section {
+      border: 1px solid var(--line); border-radius: 10px; background: var(--bg2);
+      padding: 0.9rem 0.95rem; margin-bottom: 0.85rem;
+    }
+    .section:last-child { margin-bottom: 0; }
+    .section-title {
+      margin: 0 0 0.7rem; font-size: 0.95rem; font-weight: 700; color: var(--accent2);
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .section-title span { color: var(--muted); font-weight: 500; font-size: 0.82rem; }
+    .upgrade-row {
+      display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.45rem 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.88rem; flex-wrap: wrap;
+    }
+    .upgrade-row:last-child { border-bottom: 0; }
+    .upgrade-row > label { margin: 0; flex: 1; min-width: 140px; cursor: pointer; color: var(--text); font-size: 0.88rem; }
+    .badge {
+      font-size: 0.72rem; font-family: var(--mono); color: var(--muted);
+      background: rgba(0,0,0,0.25); border-radius: 4px; padding: 0.15rem 0.35rem;
+    }
+    .hidden { display: none !important; }
+    .part-name { font-weight: 600; color: var(--text); line-height: 1.25; }
+    .part-id {
+      margin-top: 0.15rem; font-family: var(--mono); font-size: 0.72rem;
+      color: var(--muted); word-break: break-all;
+    }
+    .created-by {
+      margin: 0.4rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .created-by strong { color: var(--text); font-weight: 600; }
+    .created-by a { color: var(--accent); font-weight: 700; text-decoration: underline; }
+    .created-by a:hover { color: #fff; }
+    .profile-row { margin-bottom: 0.85rem; max-width: 360px; }
+    .footer-note {
+      margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line);
+      font-size: 0.78rem; color: var(--muted); line-height: 1.45;
+    }
+    .skill-tiers { display: flex; flex-wrap: wrap; gap: 0.25rem; width: 100%; margin-left: 1.6rem; }
+    .skill-tiers label { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin: 0; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="site-back-link" href="index.html">Back to GZO editors</a>
+    <div class="topbar">
+      <div class="brand">
+        <h1>Car Mechanic <span>2021</span></h1>
+        <p class="created-by">Created by <strong>Ynot</strong> — Have any questions or need help? Click the link to join Discord: <a href="https://discord.gg/4hGKAHdvp6" target="_blank" rel="noopener noreferrer">GZO</a></p>
+      </div>
+    </div>
+
+    <div class="panel" id="folderPanel">
+      <div class="drop" id="drop" role="button" tabindex="0">
+        <strong>Select Saves folder</strong>
+        <div class="sub">Click here and pick your Car Mechanic Simulator 2021 Saves folder</div>
+        <input type="file" id="folderInput" webkitdirectory directory multiple />
+      </div>
+      <div class="steps">
+        <div>1. Open: <b>AppData / LocalLow / Red Dot Games / Car Mechanic Simulator 2021 / Saves</b></div>
+        <div>2. Pick the <b>Saves</b> folder (contains profile*.cms21b files)</div>
+        <div>3. Choose a profile if you have more than one, edit tabs, then click <b>Save changes</b></div>
+        <div>4. Saving writes the profile back and makes a <b>GZO_Backup_...</b> folder first (when supported)</div>
+      </div>
+      <div class="path">%AppData%\LocalLow\Red Dot Games\Car Mechanic Simulator 2021\Saves\</div>
+    </div>
+    <div class="status" id="status">Opening folder picker...</div>
+
+    <div id="editorRoot" class="hidden">
+      <div class="toolbar">
+        <button type="button" class="btn btn-ok" id="btnSave">Save changes</button>
+        <button type="button" class="btn" id="btnChangeFolder">Change folder</button>
+      </div>
+      <div class="meta" id="folderMeta" style="margin-bottom:0.85rem"></div>
+      <div class="profile-row hidden" id="profileRow">
+        <label for="profileSelect">Profile</label>
+        <select id="profileSelect"></select>
+      </div>
+
+      <div class="tabs" id="tabs">
+        <button type="button" class="tab active" data-tab="character">Character</button>
+        <button type="button" class="tab" data-tab="skills">Skills</button>
+        <button type="button" class="tab" data-tab="garage">Garage</button>
+        <button type="button" class="tab" data-tab="parts">Parts</button>
+      </div>
+
+      <div class="panel view active" id="view-character">
+        <div class="section">
+          <h3 class="section-title">Player stats <span>Money, level, XP, skill points</span></h3>
+          <div class="row">
+            <div><label for="money">Money</label><input type="number" id="money" min="0" step="1" /></div>
+            <div><label for="level">Level</label><input type="number" id="level" min="1" max="50" step="1" /></div>
+            <div><label for="xp">XP</label><input type="number" id="xp" min="0" step="1" /></div>
+            <div><label for="skillPoints">Skill points</label><input type="number" id="skillPoints" min="0" step="1" /></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxCharacter">Max all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-skills">
+        <div class="section">
+          <h3 class="section-title">Skills <span id="skillCount">0 skills</span></h3>
+          <p class="hint">Check Purchased to unlock a skill. Tier boxes control individual upgrade levels.</p>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnUnlockAllSkills">Unlock all</button>
+          </div>
+          <div id="skillList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-garage">
+        <div class="section">
+          <h3 class="section-title">Garage upgrades <span id="garageCount">23 items</span></h3>
+          <p class="hint">Checked = unlocked (state 1 or higher).</p>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnUnlockAllGarage">Unlock all</button>
+          </div>
+          <div id="garageList"></div>
+        </div>
+      </div>
+
+      <div class="panel view" id="view-parts">
+        <div class="section">
+          <h3 class="section-title">Inventory parts <span id="partsCount">0 parts</span></h3>
+          <div class="actions">
+            <button type="button" class="btn btn-primary" id="btnMaxCondition">Max condition</button>
+            <button type="button" class="btn btn-primary" id="btnMaxQuality">Max quality</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="partsTable">
+              <thead>
+                <tr>
+                  <th>Part</th>
+                  <th>Condition</th>
+                  <th>Quality</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer-note">Binary format support adapted from the open-source cms2021-save-editor (MIT).</p>
+  </div>
+
+  <script>
+/* Binary codec adapted from rdeeb/cms2021-save-editor (MIT) */
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const MAGIC = 'PJOOOTER'
+
+const _STANDARD_SIZE = 47
+const _BODY_SIZE     = 63
+const _RIM_SIZE      = 64
+
+const _BODY_PART_PREFIXES = ['car_', 'window', 'mirror', 'door', 'trunk',
+                             'hood', 'taillight', 'bumper', 'fender']
+const _RIM_PREFIXES       = ['rim_', 'tire_', 'wheel_']
+
+const _GARAGE_NAMES = [
+  'paintshop','scraps','dyno','warehouse','path_test','car_wash',
+  'unlock_tablet','unlock_obd','unlock_fuel','unlock_electronic',
+  'garage_upgrade','garage_customization','lifter','unlock_cylinder',
+  'unlock_tires','brake_lathe','repair_parts','welder','battery',
+  'crane','repair_body','bus_upgrade','windowtint',
+]
+
+const _utf8dec = new TextDecoder('utf-8')
+const _utf8enc = new TextEncoder()
+
+// Byte patterns used for dynamic-offset lookups in the tail section
+// \x5c\xfe\xff\xff = last IEEE-754 NaN sentinel; \x00\x00\xf0\x41 = float32(30.0)
+const _STATS_ANCHOR   = new Uint8Array([0x5c, 0xfe, 0xff, 0xff, 0x00, 0x00, 0xf0, 0x41])
+// uint32(23) + str8 "paintshop"  (23 = number of garage items)
+const _GARAGE_NEEDLE  = new Uint8Array([0x17, 0x00, 0x00, 0x00, 0x09,
+                                        ..._utf8enc.encode('paintshop')])
+// First skill name is always "fast_movement"
+const _SKILL_NEEDLE   = _utf8enc.encode('fast_movement')
+
+// ── Low-level utilities ───────────────────────────────────────────────────────
+
+function _bytesToHex(bytes) {
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+function _hexToBytes(hex) {
+  const arr = new Uint8Array(hex.length >>> 1)
+  for (let i = 0; i < arr.length; i++) {
+    arr[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  }
+  return arr
+}
+
+function _concatBytes(arrays) {
+  const total = arrays.reduce((s, a) => s + a.length, 0)
+  const out = new Uint8Array(total)
+  let off = 0
+  for (const a of arrays) { out.set(a, off); off += a.length }
+  return out
+}
+
+/** Find first occurrence of needle in haystack from fromIndex. Returns -1 if absent. */
+function _bytesIndexOf(haystack, needle, fromIndex = 0) {
+  outer: for (let i = fromIndex; i <= haystack.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) continue outer
+    }
+    return i
+  }
+  return -1
+}
+
+/** Find last occurrence of needle in haystack. Returns -1 if absent. */
+function _bytesLastIndexOf(haystack, needle) {
+  let result = -1, i = 0
+  while (true) {
+    const idx = _bytesIndexOf(haystack, needle, i)
+    if (idx === -1) break
+    result = idx; i = idx + 1
+  }
+  return result
+}
+
+/** Read a length-prefixed UTF-8 string (1-byte length + data). Returns [string, nextPos]. */
+function _readStr8(data, pos) {
+  const n = data[pos]
+  const s = _utf8dec.decode(data.slice(pos + 1, pos + 1 + n))
+  return [s, pos + 1 + n]
+}
+
+/** Write a length-prefixed UTF-8 string. Returns Uint8Array. */
+function _writeStr8(s) {
+  const b = _utf8enc.encode(s)
+  return _concatBytes([new Uint8Array([b.length]), b])
+}
+
+// ── Part name heuristic ───────────────────────────────────────────────────────
+
+function _isValidPartName(s) {
+  if (s.length < 3) return false
+  if (!/^[a-zA-Z0-9_-]+$/.test(s)) return false          // rejects e.g. 'Standard[#000000]'
+  const alpha = [...s].filter(c => /[a-zA-Z]/.test(c))
+  if (alpha.length > 0 && alpha.every(c => c === c.toUpperCase())) return false  // rejects 'DGR4D37'
+  return true
+}
+
+function _findNextEntry(data, start) {
+  for (let size = 0; size < Math.min(256, data.length - start); size++) {
+    const pos = start + size
+    if (pos >= data.length) break
+    const n = data[pos]
+    if (n >= 2 && n <= 60) {
+      const end = pos + 1 + n
+      if (end <= data.length) {
+        const cand = data.slice(pos + 1, end)
+        if (cand.every(b => b >= 32 && b < 127)) {
+          if (_isValidPartName(String.fromCharCode(...cand))) return pos
+        }
+      }
+    }
+  }
+  return -1
+}
+
+// ── Block size detection ──────────────────────────────────────────────────────
+
+function _guessBlockSize(name) {
+  const low = name.toLowerCase()
+  if (_RIM_PREFIXES.some(p => low.startsWith(p)))       return _RIM_SIZE
+  if (_BODY_PART_PREFIXES.some(p => low.startsWith(p))) return _BODY_SIZE
+  return _STANDARD_SIZE
+}
+
+// ── Binary block decode / encode ──────────────────────────────────────────────
+//
+//  Block field layout (all little-endian):
+//   [0..1]   uint16  part_id
+//   [2..8]   7 bytes unknown flags
+//   [9..12]  float32 condition  (0.0 = broken … 1.0 = perfect)
+//   [13..16] float32 quality
+//   [17..20] uint32  flag
+//   [21..38] 18 bytes unknown
+//   [39..42] float32 extra
+//   [43..46] 4 bytes tail
+//   -- body/rim parts append 16 bytes of RGBA colour --
+//   [47..50] float32 paint.r
+//   [51..54] float32 paint.g
+//   [55..58] float32 paint.b
+//   [59..62] float32 paint.a
+
+function _decodeBlock(name, block) {
+  const view = new DataView(block.buffer, block.byteOffset, block.byteLength)
+  const n = block.length
+  const entry = { name, _raw: _bytesToHex(block) }
+
+  if (n >= 47) {
+    entry.part_id   = view.getUint16(0, true)
+    entry.condition = view.getFloat32(9, true)
+    entry.quality   = view.getFloat32(13, true)
+    entry.flag      = view.getUint32(17, true)
+    entry.extra     = view.getFloat32(39, true)
+  }
+  if (n >= 63) {
+    entry.paint = {
+      r: view.getFloat32(47, true),
+      g: view.getFloat32(51, true),
+      b: view.getFloat32(55, true),
+      a: view.getFloat32(59, true),
+    }
+  }
+  return entry
+}
+
+function _encodeBlock(entry) {
+  const block = _hexToBytes(entry._raw)
+  const view  = new DataView(block.buffer)
+
+  if (block.length >= 47) {
+    if (entry.condition !== undefined) view.setFloat32(9,  entry.condition, true)
+    if (entry.quality   !== undefined) view.setFloat32(13, entry.quality,   true)
+    if (entry.flag      !== undefined) view.setUint32(17,  entry.flag,      true)
+    if (entry.extra     !== undefined) view.setFloat32(39, entry.extra,     true)
+  }
+  if (block.length >= 63 && entry.paint) {
+    view.setFloat32(47, entry.paint.r, true)
+    view.setFloat32(51, entry.paint.g, true)
+    view.setFloat32(55, entry.paint.b, true)
+    view.setFloat32(59, entry.paint.a, true)
+  }
+  return block
+}
+
+// ── Parts section ─────────────────────────────────────────────────────────────
+
+function _parsePartsSection(data, start, onProgress, pStart = 10, pEnd = 65) {
+  let pos = start
+  if (pos >= data.length) return [null, pos]
+
+  const [sectionName, p1] = _readStr8(data, pos)
+  pos = p1
+
+  const view  = new DataView(data.buffer, data.byteOffset + pos)
+  if (pos + 4 > data.length) return [null, pos]
+  const count = view.getUint32(0, true)
+  pos += 4
+
+  // Heuristic: if count is absurdly large (e.g. > 10,000 for a 20KB file), 
+  // it might be a misread header.
+  if (count > 0xFFFF || (count * 40 > data.length)) {
+     // This is likely not the start of a parts section.
+     return [null, start]
+  }
+
+  const parts = []
+  let lastReportedPct = -1
+  for (let i = 0; i < count; i++) {
+    if (onProgress && count > 0) {
+      const pct = Math.round(pStart + (pEnd - pStart) * (i + 1) / count)
+      if (pct !== lastReportedPct) {
+        onProgress(pct, `Parsing parts… (${i + 1} / ${count})`)
+        lastReportedPct = pct
+      }
+    }
+    
+    if (pos >= data.length) break
+
+    const nameLen = data[pos]
+    if (pos + 1 + nameLen > data.length) break
+    const name    = _utf8dec.decode(data.slice(pos + 1, pos + 1 + nameLen))
+    pos += 1 + nameLen
+
+    const dataStart = pos
+    let blockSize
+
+    if (i < count - 1) {
+      let guessed  = _guessBlockSize(name)
+      const cand   = dataStart + guessed
+      let ok = false
+      if (cand < data.length) {
+        const n = data[cand]
+        if (n >= 2 && n <= 60) {
+          const end = cand + 1 + n
+          if (end <= data.length) {
+            const candStr = data.slice(cand + 1, end)
+            if (candStr.every(b => b >= 32 && b < 127)) {
+              if (_isValidPartName(String.fromCharCode(...candStr))) ok = true
+            }
+          }
+        }
+      }
+      if (!ok) {
+        const nextOff = _findNextEntry(data, dataStart)
+        if (nextOff !== -1) guessed = nextOff - dataStart
+      }
+      blockSize = guessed
+    } else {
+      blockSize     = _guessBlockSize(name)
+      const nextOff = _findNextEntry(data, dataStart + 1)
+      if (nextOff !== -1) {
+        const candidate = nextOff - dataStart
+        if (candidate >= 40 && candidate <= 149) blockSize = candidate
+      }
+    }
+
+    if (dataStart + blockSize > data.length) blockSize = data.length - dataStart
+    parts.push(_decodeBlock(name, data.slice(dataStart, dataStart + blockSize)))
+    pos = dataStart + blockSize
+  }
+
+  return [{ section_name: sectionName, parts }, pos]
+}
+
+function _encodePartsSection(section) {
+  const chunks = [_writeStr8(section.section_name)]
+  const countBuf = new Uint8Array(4)
+  new DataView(countBuf.buffer).setUint32(0, section.parts.length, true)
+  chunks.push(countBuf)
+  for (const p of section.parts) {
+    chunks.push(_writeStr8(p.name))
+    chunks.push(_encodeBlock(p))
+  }
+  return _concatBytes(chunks)
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+function _parseHeader(data) {
+  const magic = String.fromCharCode(...data.slice(0, 8))
+  if (magic !== MAGIC) throw new Error(`Not a valid CMS21 save file (bad magic: ${magic})`)
+
+  const view  = new DataView(data.buffer, data.byteOffset)
+  const year  = view.getUint16(8, true)
+  const month = data[10]
+  const nl    = data[11]
+  const name  = _utf8dec.decode(data.slice(12, 12 + nl))
+  let pos     = 12 + nl
+
+  const rawStart = pos
+  while (pos < data.length && data[pos] !== 0xff) pos++
+  while (pos < data.length && data[pos] === 0xff) pos++
+
+  const headerRaw = data.slice(rawStart, pos)
+
+  const hdr = {
+    magic,
+    save_year:    year,
+    save_month:   month,
+    profile_name: name,
+    version:      _extractVersion(headerRaw),
+    _header_raw:  _bytesToHex(headerRaw),
+  }
+  return [hdr, pos]
+}
+
+function _extractVersion(raw) {
+  for (let i = 0; i < raw.length - 8; i++) {
+    const n = raw[i]
+    if (n >= 3 && n <= 16) {
+      const b = raw.slice(i + 1, i + 1 + n)
+      if (!b.every(x => x >= 32 && x < 127)) continue
+      const s = String.fromCharCode(...b)
+      const stripped = s.replace(/[wWbB]+$/, '')
+      const parts    = stripped.split('.')
+      if (parts.length >= 2 && parts.filter(p => p !== '').every(p => /^\d+$/.test(p))) {
+        return s
+      }
+    }
+  }
+  return ''
+}
+
+function _encodeHeader(hdr) {
+  const yearBuf = new Uint8Array(2)
+  new DataView(yearBuf.buffer).setUint16(0, hdr.save_year, true)
+  return _concatBytes([
+    new Uint8Array([...MAGIC].map(c => c.charCodeAt(0))),
+    yearBuf,
+    new Uint8Array([hdr.save_month]),
+    _writeStr8(hdr.profile_name),
+    _hexToBytes(hdr._header_raw),
+  ])
+}
+
+// ── Tail-section dynamic-offset helpers ───────────────────────────────────────
+
+function _tailStatsOffset(tail) {
+  const idx = _bytesLastIndexOf(tail, _STATS_ANCHOR)
+  if (idx === -1) throw new Error('Stats anchor not found — unexpected save format')
+  return idx + 17  // anchor(8) + float(4) + float(4) + 1 pad byte
+}
+
+function _tailGarageStateOffset(tail) {
+  // Rather than a fixed needle, find "paintshop" and then back up to see the count.
+  const pidx = _bytesIndexOf(tail, _utf8enc.encode('paintshop'))
+  if (pidx === -1) throw new Error('Garage section not found (no paintshop)')
+  
+  // The byte before is the length (9). Before that is the count (uint32).
+  const goff = pidx - 1 - 4
+  const view = new DataView(tail.buffer, tail.byteOffset)
+  const count = view.getUint32(goff, true)
+  
+  let pos = goff + 4  // skip count uint32
+  // Skip over all names (length-prefixed)
+  for (let i = 0; i < count; i++) {
+    const n = tail[pos]
+    pos += 1 + n
+  }
+  pos += 4  // skip second count uint32
+  return pos
+}
+
+function _tailSkillPointsOffset(tail) {
+  const goff = _bytesIndexOf(tail, _GARAGE_NEEDLE)
+  if (goff === -1) throw new Error('Garage section not found in save')
+  return goff - 4
+}
+
+function _tailSkillsOffset(tail) {
+  const idx = _bytesIndexOf(tail, _SKILL_NEEDLE)
+  if (idx === -1) throw new Error('Skills section not found in save')
+  return idx - 1 - 4  // back over the name-length byte and the count uint32
+}
+
+function _parseTailSkills(tail) {
+  const view = new DataView(tail.buffer, tail.byteOffset)
+  let pos    = _tailSkillsOffset(tail)
+  const count = view.getUint32(pos, true)
+  pos += 4
+
+  const names = []
+  for (let i = 0; i < count; i++) {
+    const [name, next] = _readStr8(tail, pos)
+    names.push(name); pos = next
+  }
+  pos += 4  // skip count2
+
+  return names.map(name => {
+    const dataLen = view.getUint32(pos, true)
+    const data    = tail.slice(pos + 4, pos + 4 + dataLen)
+    pos += 4 + dataLen
+    return {
+      name,
+      purchased: data.length > 0 ? Boolean(data[0]) : false,
+      tiers:     data.length > 1 ? Array.from(data.slice(1), Boolean) : [],
+    }
+  })
+}
+
+function _encodeTailSkills(tail, skills) {
+  const buf  = new Uint8Array(tail)  // copy
+  const view = new DataView(buf.buffer)
+  let pos    = _tailSkillsOffset(buf)
+  const count = view.getUint32(pos, true)
+  pos += 4
+
+  const names = []
+  for (let i = 0; i < count; i++) {
+    const [name, next] = _readStr8(buf, pos)
+    names.push(name); pos = next
+  }
+  pos += 4  // skip count2
+
+  for (let i = 0; i < names.length; i++) {
+    const dataLen = view.getUint32(pos, true)
+    const s = i < skills.length ? skills[i] : null
+    if (s !== null) {
+      const newData = new Uint8Array([s.purchased ? 1 : 0, ...s.tiers.map(t => t ? 1 : 0)])
+      const patched = new Uint8Array(dataLen)
+      patched.set(newData.slice(0, dataLen))
+      buf.set(patched, pos + 4)
+    }
+    pos += 4 + dataLen
+  }
+  return buf
+}
+
+// ── Public: top-level decode / encode ────────────────────────────────────────
+
+/**
+ * Decode a .cms21b ArrayBuffer into a save object.
+ * Pass the object (unmodified) to applyEdits or encode.
+ */
+function decode(arrayBuffer, onProgress) {
+  const report = (pct, label) => onProgress?.(pct, label)
+
+  report(5, 'Reading header…')
+  const data = new Uint8Array(arrayBuffer)
+  const [header, _hStart] = _parseHeader(data)
+
+  /** Validate that a potential section header at `pos` is real.
+   *  Returns { sectionName, count, partsStart } or null. */
+  function _trySectionAt(pos) {
+    if (pos + 5 >= data.length) return null
+    const namelen = data[pos]
+    if (namelen < 3 || namelen > 20) return null
+    const nameEnd = pos + 1 + namelen
+    if (nameEnd + 4 > data.length) return null
+    // All name bytes must be printable ASCII
+    for (let i = pos + 1; i < nameEnd; i++) {
+      if (data[i] < 32 || data[i] >= 127) return null
+    }
+    const sectionName = _utf8dec.decode(data.slice(pos + 1, nameEnd))
+    const view = new DataView(data.buffer, data.byteOffset)
+    const count = view.getUint32(nameEnd, true)
+    // Sanity: count can be 0 (empty inventory) but not absurdly large
+    if (count > 5000) return null
+    return { sectionName, count, partsStart: nameEnd + 4 }
+  }
+
+  // Compute rawStart independently — right after the profile name bytes,
+  // before any 0xFF padding. This is where _parseHeader's own scan began.
+  // We need to start here so we can encounter (and validate) every 0xFF block,
+  // including the very first one that immediately precedes the parts section.
+  const rawStart = 12 + data[11]   // 8(magic)+2(year)+1(month)+1(namelen) + namelen
+
+  // Scan forward through all 0xFF padding blocks starting from rawStart.
+  // The first block that leads to a valid section header is the parts section.
+  let partsSections = []
+  let pos = _hStart
+  let scanPos = rawStart
+  while (scanPos < data.length - 5) {
+    if (data[scanPos] === 0xff) {
+      // Skip the entire 0xFF run
+      while (scanPos < data.length && data[scanPos] === 0xff) scanPos++
+      const candidate = _trySectionAt(scanPos)
+      if (candidate !== null) {
+        // Found a valid section header — parse it
+        report(10, 'Parsing parts…')
+        const [section, nextPos] = _parsePartsSection(data, scanPos, report, 10, 65)
+        if (section) {
+          partsSections.push(section)
+          pos = nextPos
+        }
+        break  // Only one inventory section per save
+      }
+      // Not a valid section — keep scanning (could be an embedded 0xFF byte in car data)
+    } else {
+      scanPos++
+    }
+  }
+
+  // Fallback: nothing found, pos stays at _hStart (tail starts right after header)
+  if (partsSections.length === 0) {
+    pos = _hStart
+  }
+
+  report(70, 'Reading player stats…')
+  const tailRaw = _bytesToHex(data.slice(pos))
+
+  report(100, 'Done')
+  return { header, parts_sections: partsSections, _tail_raw: tailRaw }
+}
+
+/**
+ * Re-encode a (possibly modified) save object into a Uint8Array.
+ */
+function encode(save) {
+  return _concatBytes([
+    _encodeHeader(save.header),
+    ...save.parts_sections.map(_encodePartsSection),
+    _hexToBytes(save._tail_raw),
+  ])
+}
+
+// ── Public: derived data (mirrors server.py helpers) ─────────────────────────
+
+function parseStats(save) {
+  const tail = _hexToBytes(save._tail_raw)
+  const view = new DataView(tail.buffer)
+  const off  = _tailStatsOffset(tail)
+  return {
+    money:        view.getUint32(off,     true),
+    level:        view.getUint32(off + 4, true) + 1,  // stored as level - 1
+    xp:           view.getUint32(off + 8, true),
+    skill_points: view.getUint32(_tailSkillPointsOffset(tail), true),
+  }
+}
+
+function parseGarage(save) {
+  const tail = _hexToBytes(save._tail_raw)
+  const base = _tailGarageStateOffset(tail)
+  return _GARAGE_NAMES.map((name, i) => {
+    const off = base + i * 8
+    const raw = Array.from(tail.slice(off, off + 8))
+    return { name, state: raw[0], raw }
+  })
+}
+
+function parseSkills(save) {
+  return _parseTailSkills(_hexToBytes(save._tail_raw))
+}
+
+function flattenParts(save) {
+  const out = []
+  for (let si = 0; si < save.parts_sections.length; si++) {
+    const sec = save.parts_sections[si]
+    for (let pi = 0; pi < sec.parts.length; pi++) {
+      const p = sec.parts[pi]
+      out.push({
+        sec_idx:       si,
+        part_idx:      pi,
+        name:          p.name,
+        condition:     p.condition ?? null,
+        quality:       p.quality   ?? null,
+        has_condition: 'condition' in p,
+      })
+    }
+  }
+  return out
+}
+
+/**
+ * Scan binary buffers for car sections and group them.
+ * CM21 saves are sequential: car record followed by its components.
+ */
+function parseCars(save) {
+  const tail = _hexToBytes(save._tail_raw)
+  
+  const cars = []
+  let currentCar = null
+  
+  const PART_PREFIXES = [
+    'car_', 'window', 'mirror', 'door', 'trunk', 'hood', 'taillight', 'bumper', 'fender',
+    'rim_', 'tire_', 'wheel_', 'suspension', 'piasta', 'tuleja', 'amortyzator',
+    'tarcza', 'zacisk', 'klocki', 'wahacz', 'drazek', 'stabilizator', 'Engine'
+  ]
+
+  // Scan for 1-byte len + name strings
+  for (let pos = 0; pos < tail.length - 60; pos++) {
+     const len = tail[pos]
+     if (len >= 3 && len <= 50) {
+        const cand = tail.slice(pos + 1, pos + 1 + len)
+        let isString = true
+        for (let i = 0; i < cand.length; i++) {
+           if (cand[i] < 32 || cand[i] >= 127) { isString = false; break; }
+        }
+        if (isString) {
+           const name = _utf8dec.decode(cand)
+           const lower = name.toLowerCase()
+           const isPart = PART_PREFIXES.some(p => lower.startsWith(p.toLowerCase()))
+           
+           if (isPart || name.includes('/') || name.includes('(')) {
+              const isMainCar = lower.startsWith('car_') && !name.includes('-') && !lower.includes('_wash') && name.split('_').length <= 2
+              const isWash = lower === 'car_wash'
+
+              if (isMainCar || isWash) {
+                 currentCar = { name, parts: [], rawName: name }
+                 cars.push(currentCar)
+              } else if (currentCar) {
+                 // Try to decode the block following the name
+                 const dataStart = pos + 1 + len
+                 const blockSize = _guessBlockSize(name)
+                 if (dataStart + blockSize <= tail.length) {
+                    const block = tail.slice(dataStart, dataStart + blockSize)
+                    const decoded = _decodeBlock(name, block)
+                    if (decoded.condition !== undefined && decoded.condition >= 0 && decoded.condition <= 1.0) {
+                       currentCar.parts.push({
+                          ...decoded,
+                          offset: dataStart
+                       })
+                    }
+                 }
+              }
+              pos += len // skip name bytes to avoid re-reading
+           }
+        }
+     }
+  }
+  
+  // Collapse duplicates and clean up
+  return cars.map(c => ({
+     name: c.name.replace(/^car_/, '').replace(/_/g, ' '),
+     parts: c.parts,
+     rawName: c.rawName
+  }))
+}
+
+/**
+ * Apply a set of edits to a save object and return the binary result.
+ *
+ * @param {object} save        - The save object from decode()
+ * @param {object} edits
+ * @param {object} [edits.stats]        - { money, level, xp, skill_points }
+ * @param {Array}  [edits.partEdits]    - [{ sec_idx, part_idx, condition }]
+ * @param {Array}  [edits.garageEdits]  - [{ idx, state }]
+ * @param {Array}  [edits.skillEdits]   - [{ name, purchased, tiers }]
+ * @returns {Uint8Array}
+ */
+function applyEdits(save, { stats, partEdits = [], garageEdits = [], skillEdits = [], carPartEdits = [] } = {}, onProgress) {
+  const report = (pct, label) => onProgress?.(pct, label)
+
+  report(10, 'Preparing…')
+  save = JSON.parse(JSON.stringify(save))  // deep clone — never mutate the original
+
+  // ── Player stats ────────────────────────────────────────────────────────────
+  if (stats) {
+    report(30, 'Applying stats…')
+    const tail = _hexToBytes(save._tail_raw)
+    const view = new DataView(tail.buffer)
+    const off  = _tailStatsOffset(tail)
+    view.setUint32(off,     stats.money,               true)
+    view.setUint32(off + 4, Math.max(0, stats.level - 1), true)
+    view.setUint32(off + 8, stats.xp,                  true)
+    if (stats.skill_points !== undefined) {
+      view.setUint32(_tailSkillPointsOffset(tail), stats.skill_points, true)
+    }
+    save._tail_raw = _bytesToHex(tail)
+  }
+
+  // ── Part conditions ─────────────────────────────────────────────────────────
+  report(50, 'Applying part edits…')
+  for (const edit of partEdits) {
+    const part = save.parts_sections[edit.sec_idx].parts[edit.part_idx]
+    if (edit.condition !== undefined) part.condition = Math.max(0, Math.min(1, edit.condition))
+    if (edit.quality !== undefined) part.quality = Math.max(0, Math.min(1, edit.quality))
+  }
+
+  // ── Garage state ────────────────────────────────────────────────────────────
+  report(70, 'Applying garage edits…')
+  if (garageEdits.length > 0) {
+    const tail = _hexToBytes(save._tail_raw)
+    const base = _tailGarageStateOffset(tail)
+    for (const edit of garageEdits) {
+      tail[base + edit.idx * 8] = Math.max(0, Math.min(255, edit.state))
+    }
+    save._tail_raw = _bytesToHex(tail)
+  }
+
+  // ── Skills ──────────────────────────────────────────────────────────────────
+  report(85, 'Applying skill edits…')
+  if (skillEdits.length > 0) {
+    const tail    = _hexToBytes(save._tail_raw)
+    const patched = _encodeTailSkills(tail, skillEdits)
+    save._tail_raw = _bytesToHex(patched)
+  }
+
+  // ── Car Parts ───────────────────────────────────────────────────────────────
+  if (carPartEdits.length > 0) {
+    report(90, 'Applying car part edits…')
+    const tail = _hexToBytes(save._tail_raw)
+    const view = new DataView(tail.buffer)
+    for (const edit of carPartEdits) {
+       // Only patch condition at offset 9
+       view.setFloat32(edit.offset + 9, Math.max(0, Math.min(1.0, edit.condition)), true)
+    }
+    save._tail_raw = _bytesToHex(tail)
+  }
+
+  report(95, 'Encoding…')
+  const result = encode(save)
+  report(100, 'Done')
+  return result
+}
+
+
+var CMS21 = {
+  decode: decode,
+  encode: encode,
+  parseStats: parseStats,
+  parseGarage: parseGarage,
+  parseSkills: parseSkills,
+  flattenParts: flattenParts,
+  applyEdits: applyEdits
+};
+
+  </script>
+  <script>
+(function () {
+  "use strict";
+
+  function $(id) { return document.getElementById(id); }
+
+  const GARAGE_LABELS = {
+    paintshop: "Paint Shop",
+    scraps: "Scrapyard",
+    dyno: "Dyno",
+    warehouse: "Warehouse",
+    path_test: "Path Test Track",
+    car_wash: "Car Wash",
+    unlock_tablet: "Tablet",
+    unlock_obd: "OBD Scanner",
+    unlock_fuel: "Fuel System Tools",
+    unlock_electronic: "Electronic Tools",
+    garage_upgrade: "Garage Upgrade",
+    garage_customization: "Garage Customization",
+    lifter: "Car Lifter",
+    unlock_cylinder: "Cylinder Tools",
+    unlock_tires: "Tire Tools",
+    brake_lathe: "Brake Lathe",
+    repair_parts: "Part Repair Station",
+    welder: "Welder",
+    battery: "Battery Tools",
+    crane: "Crane",
+    repair_body: "Body Repair",
+    bus_upgrade: "Bus Upgrade",
+    windowtint: "Window Tint"
+  };
+
+  const PART_PHRASES = [
+    ["kolektor_wydechowy", "Exhaust Manifold"],
+    ["kolektor_dolotowy", "Intake Manifold"],
+    ["miska_olejowa", "Oil Pan"],
+    ["wal_korbowy", "Crankshaft"],
+    ["rolka_lancucha", "Timing Chain Roller"],
+    ["kolo_pasowe_walu", "Crankshaft Pulley"],
+    ["oslona_rozrzadu", "Timing Cover"],
+    ["glowica", "Cylinder Head"],
+    ["filtr_oleju", "Oil Filter"],
+    ["zacisk_hamulcowy", "Brake Caliper"],
+    ["amortyzator", "Shock Absorber"],
+    ["wahacz", "Control Arm"],
+    ["tarcza", "Brake Disc"],
+    ["klocki", "Brake Pads"],
+    ["opona", "Tire"],
+    ["felga", "Rim"],
+    ["window_front", "Windshield"],
+    ["window_back", "Rear Window"],
+    ["headlight", "Headlight"],
+    ["taillight", "Taillight"],
+    ["bumper", "Bumper"],
+    ["fender", "Fender"],
+    ["door_", "Door"],
+    ["mirror", "Mirror"],
+    ["hood", "Hood"],
+    ["trunk", "Trunk"],
+    ["engine", "Engine"],
+    ["turbo", "Turbocharger"],
+    ["alternator", "Alternator"],
+    ["starter", "Starter"],
+    ["radiator", "Radiator"],
+    ["battery", "Battery"],
+    ["suspension", "Suspension"],
+    ["rim_", "Rim"],
+    ["tire_", "Tire"],
+    ["wheel_", "Wheel"]
+  ];
+
+  const PART_TOKENS = {
+    i6: "I6", i4: "I4", r4: "R4", r6: "R6", v8: "V8",
+    blok: "Engine Block", walek: "Camshaft", pasek: "Belt", pompa: "Pump",
+    chlodnica: "Radiator", tlok: "Piston", zawor: "Valve", sprzeglo: "Clutch",
+    skrzynia: "Gearbox", hamulec: "Brake", filtr: "Filter", olej: "Oil",
+    paliwo: "Fuel", przod: "Front", tyl: "Rear", lewy: "Left", prawy: "Right",
+    front: "Front", rear: "Rear", left: "Left", right: "Right"
+  };
+
+  const state = {
+    dirHandle: null,
+    folderName: "",
+    profiles: [],
+    currentProfile: null,
+    save: null,
+    stats: null,
+    skills: [],
+    garage: [],
+    parts: [],
+    originalBytes: null
+  };
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function titleCaseWords(s) {
+    return s.replace(/(^|[_\-\s])([a-z])/g, (_, a, b) => (a === "_" || a === "-" ? " " : a) + b.toUpperCase())
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function friendlyPartName(rawId) {
+    if (!rawId) return "Unknown part";
+    let id = String(rawId).replace(/\(Clone\)/gi, "").replace(/_+/g, "_");
+    const suffixMatch = id.match(/_(\d+)$/);
+    const variant = suffixMatch ? suffixMatch[1] : "";
+    if (suffixMatch) id = id.slice(0, -suffixMatch[0].length);
+
+    const carMatch = id.match(/^car_([a-zA-Z0-9]+)-(.+)$/i);
+    if (carMatch) {
+      const car = titleCaseWords(carMatch[1]);
+      let part = carMatch[2];
+      for (const [needle, label] of PART_PHRASES) {
+        if (part.toLowerCase().includes(needle.toLowerCase())) {
+          return car + " — " + label + (variant ? " #" + variant : "");
+        }
+      }
+      return car + " — " + titleCaseWords(part.replace(/_/g, " ")) + (variant ? " #" + variant : "");
+    }
+
+    for (const [needle, label] of PART_PHRASES) {
+      if (id.toLowerCase().includes(needle.toLowerCase())) {
+        return label + (variant ? " #" + variant : "");
+      }
+    }
+
+    let work = id;
+    const chunks = [];
+    const keys = Object.keys(PART_TOKENS).sort((a, b) => b.length - a.length);
+    while (work.length) {
+      let hit = false;
+      for (const key of keys) {
+        if (work.toLowerCase().startsWith(key.toLowerCase())) {
+          if (PART_TOKENS[key]) chunks.push(PART_TOKENS[key]);
+          work = work.slice(key.length).replace(/^[_-]+/, "");
+          hit = true;
+          break;
+        }
+      }
+      if (!hit) {
+        const m = work.match(/^([A-Za-z0-9]+)/);
+        if (!m) break;
+        chunks.push(titleCaseWords(m[1]));
+        work = work.slice(m[1].length).replace(/^[_-]+/, "");
+      }
+    }
+    let label = chunks.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    if (!label) label = titleCaseWords(rawId);
+    return variant ? label + " #" + variant : label;
+  }
+
+  function friendlySkillName(name) {
+    return titleCaseWords(String(name).replace(/_/g, " "));
+  }
+
+  function partLabelHtml(rawId) {
+    const nice = friendlyPartName(rawId);
+    return '<div class="part-name">' + escHtml(nice) + '</div>' +
+      '<div class="part-id" title="Internal save ID">' + escHtml(rawId) + '</div>';
+  }
+
+  function setStatus(msg, kind) {
+    const el = $("status");
+    el.textContent = msg;
+    el.className = "status" + (kind ? " " + kind : "");
+  }
+
+  function isProfileFile(name) {
+    return /^profile\d+\.cms21b$/i.test(name);
+  }
+
+  async function readFileBytes(file) {
+    return new Uint8Array(await file.arrayBuffer());
+  }
+
+  function resetEditor() {
+    state.save = null;
+    state.stats = null;
+    state.skills = [];
+    state.garage = [];
+    state.parts = [];
+    state.currentProfile = null;
+    state.originalBytes = null;
+    $("editorRoot").classList.add("hidden");
+    $("folderPanel").classList.remove("hidden");
+    $("profileRow").classList.add("hidden");
+    $("profileSelect").innerHTML = "";
+  }
+
+  function resetToFolderPicker() {
+    state.dirHandle = null;
+    state.folderName = "";
+    state.profiles = [];
+    resetEditor();
+    $("folderInput").value = "";
+    setStatus("Select your Saves folder to begin...");
+  }
+
+  async function loadProfileByName(name) {
+    const prof = state.profiles.find((p) => p.name === name);
+    if (!prof) throw new Error("Profile not found: " + name);
+
+    if (state.save) syncFromUI();
+
+    const bytes = await readFileBytes(prof.file);
+    state.originalBytes = bytes.slice();
+    state.save = CMS21.decode(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+    state.currentProfile = prof.name;
+    state.stats = CMS21.parseStats(state.save);
+    state.skills = CMS21.parseSkills(state.save).map((s) => ({
+      name: s.name,
+      purchased: !!s.purchased,
+      tiers: s.tiers.slice()
+    }));
+    state.garage = CMS21.parseGarage(state.save).map((g, idx) => ({
+      idx: idx,
+      name: g.name,
+      state: g.state,
+      label: GARAGE_LABELS[g.name] || titleCaseWords(g.name.replace(/_/g, " "))
+    }));
+    state.parts = CMS21.flattenParts(state.save).map((p) => ({
+      sec_idx: p.sec_idx,
+      part_idx: p.part_idx,
+      name: p.name,
+      condition: p.condition != null ? p.condition : 1,
+      quality: p.quality != null ? p.quality : 1,
+      has_condition: p.has_condition
+    }));
+
+    renderAll();
+    setStatus("Loaded " + prof.name + " from " + state.folderName + ". Edit tabs, then Save changes.", "ok");
+  }
+
+  function renderAll() {
+    if (!state.save) return;
+    $("editorRoot").classList.remove("hidden");
+    $("folderPanel").classList.add("hidden");
+
+    $("money").value = state.stats.money;
+    $("level").value = state.stats.level;
+    $("xp").value = state.stats.xp;
+    $("skillPoints").value = state.stats.skill_points;
+
+    $("skillCount").textContent = state.skills.length + " skills";
+    $("skillList").innerHTML = state.skills.map((sk, idx) => {
+      const tiersHtml = sk.tiers.map((t, ti) =>
+        '<label><input type="checkbox" class="skill-tier" data-skill="' + idx + '" data-tier="' + ti + '"' + (t ? " checked" : "") + " /> T" + (ti + 1) + "</label>"
+      ).join("");
+      return '<div class="upgrade-row">' +
+        '<input type="checkbox" id="skill_p_' + idx + '" class="skill-purchased" data-skill="' + idx + '"' + (sk.purchased ? " checked" : "") + " />" +
+        '<label for="skill_p_' + idx + '">' + escHtml(friendlySkillName(sk.name)) + '</label>' +
+        '<span class="badge">' + escHtml(sk.name) + "</span>" +
+        (tiersHtml ? '<div class="skill-tiers">' + tiersHtml + "</div>" : "") +
+        "</div>";
+    }).join("");
+
+    $("garageCount").textContent = state.garage.length + " items";
+    $("garageList").innerHTML = state.garage.map((g, idx) =>
+      '<div class="upgrade-row">' +
+        '<input type="checkbox" id="gar_' + idx + '" data-garage="' + idx + '"' + (g.state >= 1 ? " checked" : "") + " />" +
+        '<label for="gar_' + idx + '">' + escHtml(g.label) + '</label>' +
+        '<span class="badge">' + escHtml(g.name) + " (" + g.state + ")</span>" +
+      "</div>"
+    ).join("");
+
+    $("partsCount").textContent = state.parts.length + " parts";
+    $("partsTable").querySelector("tbody").innerHTML = state.parts.map((p, idx) =>
+      "<tr>" +
+        "<td>" + partLabelHtml(p.name) + "</td>" +
+        '<td><input type="number" class="part-cond" data-part="' + idx + '" min="0" max="1" step="0.01" value="' + (p.condition != null ? Number(p.condition).toFixed(2) : "1.00") + '"' + (p.has_condition ? "" : " disabled") + " /></td>" +
+        '<td><input type="number" class="part-qual" data-part="' + idx + '" min="0" max="1" step="0.01" value="' + (p.quality != null ? Number(p.quality).toFixed(2) : "1.00") + '" /></td>' +
+      "</tr>"
+    ).join("");
+
+    const profRow = $("profileRow");
+    const profSel = $("profileSelect");
+    if (state.profiles.length > 1) {
+      profRow.classList.remove("hidden");
+      profSel.innerHTML = state.profiles.map((p) =>
+        '<option value="' + escHtml(p.name) + '"' + (p.name === state.currentProfile ? " selected" : "") + ">" + escHtml(p.name) + "</option>"
+      ).join("");
+    } else {
+      profRow.classList.add("hidden");
+    }
+
+    $("folderMeta").innerHTML =
+      "<div><b>Folder:</b> " + escHtml(state.folderName) + "</div>" +
+      "<div><b>Profile:</b> " + escHtml(state.currentProfile || "none") + "</div>" +
+      (state.save.header ? "<div><b>Save name:</b> " + escHtml(state.save.header.profile_name || "") + "</div>" : "") +
+      (state.dirHandle
+        ? "<div><b>Save:</b> writes profile back into this folder (with backup)</div>"
+        : "<div><b>Save:</b> download mode — pick folder again in Chrome/Edge for direct write</div>");
+
+    $("btnSave").disabled = !state.save;
+  }
+
+  function syncFromUI() {
+    if (!state.save) return;
+
+    state.stats = {
+      money: parseInt($("money").value, 10) || 0,
+      level: parseInt($("level").value, 10) || 1,
+      xp: parseInt($("xp").value, 10) || 0,
+      skill_points: parseInt($("skillPoints").value, 10) || 0
+    };
+
+    document.querySelectorAll(".skill-purchased").forEach((cb) => {
+      const idx = parseInt(cb.dataset.skill, 10);
+      if (state.skills[idx]) state.skills[idx].purchased = cb.checked;
+    });
+    document.querySelectorAll(".skill-tier").forEach((cb) => {
+      const si = parseInt(cb.dataset.skill, 10);
+      const ti = parseInt(cb.dataset.tier, 10);
+      if (state.skills[si] && state.skills[si].tiers[ti] != null) {
+        state.skills[si].tiers[ti] = cb.checked;
+      }
+    });
+
+    document.querySelectorAll("[data-garage]").forEach((cb) => {
+      const idx = parseInt(cb.dataset.garage, 10);
+      if (state.garage[idx]) {
+        state.garage[idx].state = cb.checked ? Math.max(1, state.garage[idx].state || 0) : 0;
+      }
+    });
+
+    document.querySelectorAll(".part-cond").forEach((inp) => {
+      const idx = parseInt(inp.dataset.part, 10);
+      const p = state.parts[idx];
+      if (!p || inp.disabled) return;
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) p.condition = Math.max(0, Math.min(1, v));
+    });
+    document.querySelectorAll(".part-qual").forEach((inp) => {
+      const idx = parseInt(inp.dataset.part, 10);
+      const p = state.parts[idx];
+      if (!p) return;
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) p.quality = Math.max(0, Math.min(1, v));
+    });
+  }
+
+  function buildEdits() {
+    syncFromUI();
+    const partEdits = state.parts.map((p) => ({
+      sec_idx: p.sec_idx,
+      part_idx: p.part_idx,
+      condition: p.has_condition ? p.condition : undefined,
+      quality: p.quality
+    }));
+    const garageEdits = state.garage.map((g) => ({ idx: g.idx, state: g.state }));
+    const skillEdits = state.skills.map((s) => ({
+      name: s.name,
+      purchased: s.purchased,
+      tiers: s.tiers.slice()
+    }));
+    return {
+      stats: Object.assign({}, state.stats),
+      partEdits: partEdits,
+      garageEdits: garageEdits,
+      skillEdits: skillEdits
+    };
+  }
+
+  function maxCharacter() {
+    state.stats = { money: 999999999, level: 50, xp: 999999, skill_points: 999 };
+    renderAll();
+    setStatus("Character maxed.", "ok");
+  }
+
+  function unlockAllSkills() {
+    for (const sk of state.skills) {
+      sk.purchased = true;
+      for (let i = 0; i < sk.tiers.length; i++) sk.tiers[i] = true;
+    }
+    renderAll();
+    setStatus("All skills unlocked.", "ok");
+  }
+
+  function unlockAllGarage() {
+    for (const g of state.garage) {
+      g.state = Math.max(1, g.state || 0);
+    }
+    renderAll();
+    setStatus("All garage items unlocked.", "ok");
+  }
+
+  function maxPartCondition() {
+    for (const p of state.parts) {
+      if (p.has_condition) p.condition = 1;
+    }
+    renderAll();
+    setStatus("All part conditions set to 1.0.", "ok");
+  }
+
+  function maxPartQuality() {
+    for (const p of state.parts) p.quality = 1;
+    renderAll();
+    setStatus("All part quality set to 1.0.", "ok");
+  }
+
+  function downloadBlob(name, buf) {
+    const blob = new Blob([buf], { type: "application/octet-stream" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function backupCurrentProfile() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const stamp = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "_" +
+      pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    const backupName = "GZO_Backup_" + stamp;
+    const backupDir = await state.dirHandle.getDirectoryHandle(backupName, { create: true });
+    const out = await backupDir.getFileHandle(state.currentProfile, { create: true });
+    const w = await out.createWritable();
+    await w.write(state.originalBytes);
+    await w.close();
+    return backupName;
+  }
+
+  async function saveChanges() {
+    try {
+      if (!state.save || !state.currentProfile) throw new Error("Nothing loaded to save.");
+      const edits = buildEdits();
+      const encoded = CMS21.applyEdits(state.save, edits);
+      const prof = state.profiles.find((p) => p.name === state.currentProfile);
+
+      if (state.dirHandle) {
+        setStatus("Making backup...", "");
+        const backupName = await backupCurrentProfile();
+        const handle = (prof && prof.handle) || await state.dirHandle.getFileHandle(state.currentProfile, { create: true });
+        const w = await handle.createWritable();
+        await w.write(encoded);
+        await w.close();
+        if (prof) prof.handle = handle;
+        state.originalBytes = encoded.slice();
+        state.save = CMS21.decode(encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength));
+        setStatus("Saved " + state.currentProfile + " to " + state.folderName + ". Backup: " + backupName + ".", "ok");
+      } else {
+        downloadBlob(state.currentProfile, encoded);
+        setStatus("Downloaded " + state.currentProfile + " (no folder write access). Copy it into your Saves folder.", "ok");
+      }
+    } catch (e) {
+      setStatus("Could not save: " + e.message, "err");
+      console.error(e);
+    }
+  }
+
+  async function loadFromDirectoryHandle(dirHandle) {
+    state.dirHandle = dirHandle;
+    state.folderName = dirHandle.name;
+    state.profiles = [];
+
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (handle.kind !== "file") continue;
+      if (!isProfileFile(name)) continue;
+      const file = await handle.getFile();
+      state.profiles.push({ name: name, handle: handle, file: file });
+    }
+
+    state.profiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    if (!state.profiles.length) throw new Error("No profile*.cms21b files found in this folder.");
+
+    await loadProfileByName(state.profiles[0].name);
+  }
+
+  async function loadFromFileList(fileList) {
+    const files = [...fileList];
+    state.dirHandle = null;
+    state.profiles = [];
+    let folderName = "";
+
+    for (const file of files) {
+      const parts = (file.webkitRelativePath || file.name).split(/[/\\]/);
+      const base = parts[parts.length - 1];
+      if (!folderName && file.webkitRelativePath) folderName = parts[0] || "";
+      if (file.webkitRelativePath && parts.length > 2) continue;
+      if (!isProfileFile(base)) continue;
+      state.profiles.push({ name: base, handle: null, file: file });
+    }
+
+    state.folderName = folderName || "selected folder";
+    state.profiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    if (!state.profiles.length) throw new Error("No profile*.cms21b files found in this folder.");
+
+    await loadProfileByName(state.profiles[0].name);
+    if (!state.dirHandle) {
+      setStatus("Folder loaded in browse-only mode. Use Chrome or Edge and allow folder access so Save changes can write files back.", "err");
+    }
+  }
+
+  async function pickFolder() {
+    try {
+      if (window.showDirectoryPicker) {
+        try {
+          const dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+          await loadFromDirectoryHandle(dirHandle);
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") {
+            setStatus("Folder selection cancelled. Click the panel to try again.", "");
+            return;
+          }
+          const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+          await loadFromDirectoryHandle(dirHandle);
+          return;
+        }
+      }
+      $("folderInput").click();
+      setStatus("Select your Saves folder to begin...");
+    } catch (e) {
+      if (e && e.name === "AbortError") {
+        setStatus("Folder selection cancelled. Click the panel to try again.", "");
+        return;
+      }
+      setStatus("Folder picker unavailable — use the file input fallback.", "err");
+      $("folderInput").click();
+    }
+  }
+
+  $("drop").addEventListener("click", () => pickFolder());
+  $("drop").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickFolder(); }
+  });
+  $("folderInput").addEventListener("change", async () => {
+    try {
+      if (!$("folderInput").files || !$("folderInput").files.length) return;
+      await loadFromFileList($("folderInput").files);
+    } catch (e) {
+      setStatus("Could not open that folder: " + e.message, "err");
+      console.error(e);
+    }
+  });
+
+  $("tabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab");
+    if (!btn) return;
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === btn));
+    document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === "view-" + btn.dataset.tab));
+  });
+
+  $("profileSelect").addEventListener("change", async () => {
+    try {
+      await loadProfileByName($("profileSelect").value);
+    } catch (e) {
+      setStatus("Could not load profile: " + e.message, "err");
+    }
+  });
+
+  $("btnSave").addEventListener("click", () => saveChanges());
+  $("btnChangeFolder").addEventListener("click", () => resetToFolderPicker());
+  $("btnMaxCharacter").addEventListener("click", () => { syncFromUI(); maxCharacter(); });
+  $("btnUnlockAllSkills").addEventListener("click", () => { syncFromUI(); unlockAllSkills(); });
+  $("btnUnlockAllGarage").addEventListener("click", () => { syncFromUI(); unlockAllGarage(); });
+  $("btnMaxCondition").addEventListener("click", () => { syncFromUI(); maxPartCondition(); });
+  $("btnMaxQuality").addEventListener("click", () => { syncFromUI(); maxPartQuality(); });
+
+  pickFolder();
+})();
+
+  </script>
+</body>
+</html>
