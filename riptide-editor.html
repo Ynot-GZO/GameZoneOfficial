@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GZO — Dead Island Riptide DE Save Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Source+Sans+3:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #07151a; --panel: #0d2229; --panel2: #123038;
+      --line: rgba(120, 220, 200, 0.18); --text: #e6f4f1; --muted: #8fb3ad;
+      --teal: #2ec4b6; --lime: #a8e010; --coral: #ff6b4a; --sand: #e8c07a;
+      --danger: #ff5a5a; --ok: #5dce7a;
+      --display: "Oswald", sans-serif; --font: "Source Sans 3", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--font); color: var(--text);
+      background:
+        radial-gradient(ellipse 80% 45% at 10% -10%, rgba(46, 196, 182, 0.22), transparent 50%),
+        radial-gradient(ellipse 70% 40% at 90% 0%, rgba(255, 107, 74, 0.16), transparent 48%),
+        linear-gradient(180deg, #0a1c22 0%, var(--bg) 55%, #040c10 100%);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 1.1rem 1.15rem 3rem; }
+    .site-back-link {
+      display: inline-flex; margin-bottom: 14px; text-decoration: none; font-weight: 700; font-size: 0.9rem;
+      color: var(--muted); border: 1px solid var(--line); border-radius: 8px; background: rgba(13,34,41,.85); padding: 7px 14px;
+    }
+    .site-back-link:hover { color: var(--text); border-color: var(--teal); }
+    .hero { margin-bottom: 1rem; }
+    .hero .tag { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lime); }
+    h1 {
+      margin: 0.25rem 0 0; font-family: var(--display); font-size: clamp(1.9rem, 4.5vw, 2.8rem);
+      text-transform: uppercase; color: var(--teal); letter-spacing: 0.02em;
+    }
+    .hero p { margin: 0.4rem 0 0; color: var(--muted); max-width: 62ch; line-height: 1.45; }
+    .panel {
+      background: linear-gradient(180deg, rgba(18,48,56,.95), rgba(10,28,34,.96));
+      border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1rem;
+    }
+    .panel h2 {
+      margin: 0 0 0.75rem; font-family: var(--display); font-size: 1.2rem; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--sand); font-weight: 600;
+    }
+    .drop {
+      border: 1.5px dashed rgba(46,196,182,.35); border-radius: 10px; padding: 1.25rem; text-align: center;
+      background: rgba(0,0,0,.22); cursor: pointer;
+    }
+    .drop:hover, .drop.drag { border-color: var(--teal); background: rgba(46,196,182,.08); }
+    .drop strong { display: block; color: var(--teal); margin-bottom: 0.25rem; }
+    .drop input { display: none; }
+    .path, .hint { color: var(--muted); font-size: 0.86rem; line-height: 1.45; }
+    .path {
+      margin-top: 0.7rem; font-size: 0.78rem; background: rgba(0,0,0,.28); border: 1px solid var(--line);
+      border-radius: 8px; padding: 0.55rem 0.7rem; word-break: break-all;
+    }
+    .status { margin: 0.65rem 0 0; font-weight: 700; color: var(--muted); }
+    .status.ok { color: var(--ok); } .status.err { color: var(--danger); }
+    .actions, .quick { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.75rem; }
+    .quick { margin: 0 0 0.85rem; }
+    .btn {
+      appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+      border-radius: 8px; padding: 0.5rem 0.85rem; font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .btn:hover { border-color: var(--teal); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: rgba(46,196,182,.18); border-color: rgba(46,196,182,.5); color: #bff5ef; }
+    .btn-lime { background: rgba(168,224,16,.14); border-color: rgba(168,224,16,.45); color: #e8ffa0; }
+    .btn-coral { background: rgba(255,107,74,.14); border-color: rgba(255,107,74,.45); color: #ffd0c4; }
+    .workspace { display: none; } .workspace.on { display: block; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; margin-bottom: 0.75rem; }
+    label { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.28rem; }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--line); background: rgba(0,0,0,.35); color: var(--text);
+      border-radius: 8px; padding: 0.5rem 0.65rem; font: inherit; font-weight: 600;
+    }
+    textarea { min-height: 72px; resize: vertical; font-size: 0.88rem; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid rgba(46,196,182,.35); border-color: var(--teal); }
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.5rem; margin-bottom: 0.85rem; }
+    .meta-item { background: rgba(0,0,0,.25); border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.7rem; }
+    .meta-item span { display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .meta-item b { color: var(--sand); word-break: break-word; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; }
+    .tab {
+      border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px;
+      padding: 0.4rem 0.85rem; font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .tab.active { background: var(--teal); color: #042018; border-color: var(--teal); }
+    .view { display: none; } .view.active { display: block; }
+    .inv { max-height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: rgba(0,0,0,.28); }
+    .inv table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    .inv th, .inv td { padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; }
+    .inv th { position: sticky; top: 0; background: #0d2229; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
+    .check-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.3rem;
+      max-height: 240px; overflow: auto; padding: 0.45rem; border: 1px solid var(--line); border-radius: 8px; background: rgba(0,0,0,.25);
+    }
+    .check { display: flex; gap: 0.4rem; align-items: flex-start; font-size: 0.84rem; font-weight: 600; }
+    .check input { width: 15px; height: 15px; margin-top: 2px; accent-color: var(--teal); flex-shrink: 0; }
+    .note {
+      margin: 0 0 0.75rem; padding: 0.65rem 0.75rem; border-radius: 8px;
+      background: rgba(232, 192, 122, 0.08); border: 1px solid rgba(232, 192, 122, 0.28);
+      color: var(--sand); font-size: 0.88rem; line-height: 1.4;
+    }
+    .mission-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+    .mission-toolbar select, .mission-toolbar input {
+      background: #0a1c22; border: 1px solid var(--line); color: var(--text);
+      border-radius: 8px; padding: 0.4rem 0.55rem; font: inherit;
+    }
+    .mission-counts { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+    .mission-block { margin-bottom: 1rem; }
+    .mission-block h3 {
+      margin: 0 0 0.4rem; font-family: var(--display); font-size: 1.05rem;
+      letter-spacing: 0.04em; text-transform: uppercase; color: var(--teal);
+    }
+    .mission-list {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.35rem;
+      max-height: 280px; overflow: auto; padding: 0.4rem; border: 1px solid var(--line);
+      border-radius: 8px; background: rgba(0,0,0,.25);
+    }
+    .mission-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 0.35rem; align-items: baseline;
+      padding: 0.35rem 0.45rem; border-radius: 6px; background: rgba(46, 196, 182, 0.05);
+    }
+    .mission-row .name { font-weight: 700; font-size: 0.88rem; }
+    .mission-row .meta { color: var(--muted); font-size: 0.75rem; font-weight: 600; }
+    .mission-row .id { grid-column: 1 / -1; color: var(--muted); font-size: 0.68rem; opacity: 0.85; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="site-back-link" href="index.html">← Back to GZO hub</a>
+    <header class="hero">
+      <div class="tag">Definitive Edition · Steam</div>
+      <h1>Dead Island Riptide</h1>
+      <p>Edit level, cash, XP, inventory stacks, blueprints, collectables, map / checkpoint / chapter. Close the game before replacing the save.</p>
+    </header>
+
+    <section class="panel">
+      <h2>Load save</h2>
+      <div class="drop" id="drop">
+        <strong>Drop save_#.sar or save_#.sav here</strong>
+        <div class="hint">or click to browse</div>
+        <input id="file" type="file" accept=".sar,.sav,application/octet-stream" />
+      </div>
+      <div class="path">Usually: Steam\userdata\&lt;id&gt;\383150\remote\out\save\save_#.sar</div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnDownload" disabled>Download edited save</button>
+        <button class="btn" id="btnClear" disabled>Clear</button>
+      </div>
+      <p class="status" id="status">Load a character save to begin.</p>
+    </section>
+
+    <div class="workspace" id="workspace">
+      <section class="panel">
+        <h2>Quick strikes</h2>
+        <div class="quick">
+          <button class="btn btn-lime" id="qMaxLevel">Max level + skill pts</button>
+          <button class="btn btn-coral" id="qMaxCash">Max cash</button>
+          <button class="btn btn-primary" id="qMaxXp">High XP</button>
+          <button class="btn btn-lime" id="qMaxStacks">Max stacks + fill missing misc</button>
+          <button class="btn btn-coral" id="qAllPlans">Add all blueprints</button>
+          <button class="btn btn-coral" id="qAllAmmo">Add all ammo</button>
+          <button class="btn btn-coral" id="qAllThrow">Add all throwables</button>
+          <button class="btn btn-coral" id="qAllCollect">Add all collectables</button>
+          <button class="btn btn-primary" id="qKit">Full kit (everything)</button>
+          <button class="btn btn-lime" id="qInfiniteAmmo">Infinite ammo (all guns)</button>
+        </div>
+        <p class="hint" style="margin:0.45rem 0 0">
+          Close the game, download the edited <strong>.sar</strong>, then overwrite the slot you load.
+        </p>
+        <div class="meta-grid" id="metaGrid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="char">Character</button>
+          <button class="tab" data-tab="skills">Skills</button>
+          <button class="tab" data-tab="world">Map / checkpoint</button>
+          <button class="tab" data-tab="inv">Inventory</button>
+          <button class="tab" data-tab="add">Add items</button>
+        </div>
+
+        <div class="view active" id="view-char">
+          <div class="note">
+            Close the game before replacing the save. Use the <strong>.sar</strong> slot you actually load in-game.
+          </div>
+          <div class="row">
+            <div><label>Level (1–70)</label><input type="number" id="fLevel" min="1" max="70" /></div>
+            <div><label>Cash</label><input type="number" id="fCash" min="0" max="99999999" /></div>
+            <div><label>XP</label><input type="number" id="fXp" min="0" max="999999999" /></div>
+            <div><label>Unspent skill points</label><input type="number" id="fSkillPts" min="0" max="9999" /></div>
+          </div>
+          <div class="actions"><button class="btn btn-primary" id="btnApplyChar">Apply character</button></div>
+        </div>
+
+        <div class="view" id="view-skills">
+          <div class="note">
+            Unspent points let you buy nodes in-game. Rank edits write the skill tree inside the inventory section (same place DISE uses).
+          </div>
+          <div class="row">
+            <div><label>Unspent skill points</label><input type="number" id="fSkillPts2" min="0" max="9999" /></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-lime" id="qMaxSkillPts">Give 200 skill points</button>
+            <button class="btn btn-primary" id="btnApplySkills">Apply skill points</button>
+            <button class="btn btn-lime" id="btnMaxSkillRanks">Max all skill ranks (legit)</button>
+          </div>
+          <div class="note" style="margin-top:0.75rem;border-color:rgba(255,107,74,0.45)">
+            <strong>Skill tweaks (beta)</strong> — DISE-style cheats. Pushes damage / ammo skill ranks past normal caps (can mean huge damage / near-bottomless ammo).
+            Test offline; results vary by character.
+            <div class="actions" style="margin:0.55rem 0 0">
+              <button class="btn btn-coral" id="btnTweakDamage">Boost weapon damage</button>
+              <button class="btn btn-coral" id="btnTweakAmmo">Unlimited ammo capacity</button>
+              <button class="btn btn-coral" id="btnTweakAll">All skill tweaks (damage + ammo + max ranks)</button>
+            </div>
+          </div>
+          <p class="hint" id="skillBlockHint" style="margin:0.5rem 0 0">Load a save to see skill block status.</p>
+        </div>
+
+        <div class="view" id="view-world">
+          <p class="hint" style="margin-top:0">These rewrite the location strings in the character block. Use a checkpoint that exists on that map or the game may warp oddly.</p>
+          <div class="row">
+            <div>
+              <label>Map</label>
+              <select id="fMap"></select>
+            </div>
+            <div>
+              <label>Checkpoint</label>
+              <select id="fCheckpoint"></select>
+            </div>
+            <div>
+              <label>Chapter / story marker</label>
+              <select id="fChapter"></select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Custom checkpoint id (optional override)</label>
+              <input type="text" id="fCheckpointCustom" placeholder="Leave blank to use dropdown" />
+            </div>
+            <div>
+              <label>Marker / secondary (advanced)</label>
+              <input type="text" id="fMarker" />
+            </div>
+          </div>
+          <div class="actions"><button class="btn btn-primary" id="btnApplyWorld">Apply map / checkpoint</button></div>
+        </div>
+
+        <div class="view" id="view-inv">
+          <div class="note" style="margin-bottom:0.65rem">
+            <strong>Rare</strong> = color/rarity. <strong>Upg</strong> = workbench upgrade 0–3.
+            <strong>Mod</strong> = applied blueprint. Blueprints must stay qty <strong>1</strong>.
+          </div>
+          <div class="actions" style="margin-top:0;margin-bottom:0.65rem">
+            <button class="btn btn-lime" id="btnInfiniteAmmo">Infinite ammo (all guns)</button>
+            <button class="btn btn-lime" id="btnMaxStacks2">Max stacks + ammo 9999</button>
+            <button class="btn btn-coral" id="btnRepair">Unbreakable weapons</button>
+            <button class="btn btn-primary" id="btnGodWeapons">Godify weapons (orange + upg3 + mod)</button>
+            <button class="btn" id="btnWepOrange">Weapons rarity Orange</button>
+            <button class="btn" id="btnWepUpg1">Workbench upgrade 1</button>
+            <button class="btn btn-lime" id="btnWepUpg3">Workbench upgrade 3 (max)</button>
+          </div>
+          <p class="hint" style="margin:0 0 0.65rem">Workbench upgrade is 0–3. Rarity is White → Orange. Use <strong>∞ ammo</strong> on a row for one gun.</p>
+          <div class="inv">
+            <table>
+              <thead><tr><th>Bag</th><th>Item</th><th>Mod</th><th>Qty</th><th>Dur</th><th>Rare</th><th>Upg</th><th></th></tr></thead>
+              <tbody id="invBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="view" id="view-add">
+          <p class="hint" style="margin-top:0">Adds into backpack (stackables at 999). Already-owned ids are skipped unless you use “Add all in category”.</p>
+          <div class="row">
+            <div>
+              <label>Category</label>
+              <select id="addCat">
+                <option value="CRAFT_PARTS">Craft parts (misc)</option>
+                <option value="AMMO">Ammo</option>
+                <option value="THROWABLES">Throwables</option>
+                <option value="CONSUMABLES">Medkits / food / alcohol</option>
+                <option value="CRAFTPLANS">Blueprints</option>
+                <option value="COLLECTABLES">Collectables</option>
+                <option value="QUEST_ITEMS">Quest items</option>
+                <option value="WEAPONS">Weapons</option>
+              </select>
+            </div>
+            <div>
+              <label>Filter</label>
+              <input type="text" id="addFilter" placeholder="Search…" />
+            </div>
+          </div>
+          <div class="actions" style="margin-top:0;margin-bottom:0.55rem">
+            <button class="btn" id="btnCheckAll">Check all visible</button>
+            <button class="btn" id="btnCheckNone">Uncheck all</button>
+            <button class="btn btn-primary" id="btnAddSelected">Add selected</button>
+            <button class="btn btn-lime" id="btnAddCatAll">Add ALL in this category</button>
+          </div>
+          <div class="check-grid" id="addGrid"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="riptide-data.js"></script>
+  <script src="riptide-skills.js"></script>
+  <script>
+    const D = window.RIPTIDE_DATA;
+    const SK = window.RIPTIDE_SKILLS || {};
+    let fileName = "save_1.sar";
+    let state = null;
+
+    const $ = (id) => document.getElementById(id);
+    function setStatus(msg, type) {
+      $("status").textContent = msg;
+      $("status").className = "status" + (type ? " " + type : "");
+    }
+    function u32(n) {
+      const b = new Uint8Array(4);
+      new DataView(b.buffer).setUint32(0, n >>> 0, true);
+      return b;
+    }
+    function f32(n) {
+      const b = new Uint8Array(4);
+      new DataView(b.buffer).setFloat32(0, n, true);
+      return b;
+    }
+    function concat(bufs) {
+      let n = 0; for (const b of bufs) n += b.length;
+      const out = new Uint8Array(n); let o = 0;
+      for (const b of bufs) { out.set(b, o); o += b.length; }
+      return out;
+    }
+    function readU16Str(view, off) {
+      const len = view.getUint16(off, true);
+      if (len > 400 || off + 2 + len > view.byteLength) throw new Error("Bad string @" + off);
+      let s = "";
+      for (let i = 0; i < len; i++) s += String.fromCharCode(view.getUint8(off + 2 + i));
+      return { value: s, next: off + 2 + len };
+    }
+    function writeU16Str(str) {
+      const b = new Uint8Array(2 + str.length);
+      new DataView(b.buffer).setUint16(0, str.length, true);
+      for (let i = 0; i < str.length; i++) b[2 + i] = str.charCodeAt(i) & 0xff;
+      return b;
+    }
+
+    function parseSections(buf) {
+      const header = buf.slice(0, 20);
+      const sections = [];
+      let o = 20;
+      const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+      while (o + 8 <= buf.length) {
+        const id = view.getUint32(o, true);
+        const size = view.getUint32(o + 4, true);
+        if (o + 8 + size > buf.length) break;
+        sections.push({ id, data: buf.slice(o + 8, o + 8 + size) });
+        o += 8 + size;
+      }
+      if (o !== buf.length) throw new Error("Section parse mismatch");
+      return { header, sections };
+    }
+    function buildFile(header, sections) {
+      const parts = [header];
+      for (const s of sections) parts.push(u32(s.id), u32(s.data.length), s.data);
+      return concat(parts);
+    }
+
+    function parse101(data) {
+      const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+      let off = 4;
+      const unk0 = view.getUint32(off, true); off += 4;
+      const unk1 = view.getUint32(off, true); off += 4;
+      const unk2 = view.getUint32(off, true); off += 4;
+      const unk3 = view.getUint32(off, true); off += 4;
+      let s;
+      s = readU16Str(view, off); const map = s.value; off = s.next;
+      s = readU16Str(view, off); const checkpoint = s.value; off = s.next;
+      s = readU16Str(view, off); const marker = s.value; off = s.next;
+      const preType = view.getUint32(off, true); off += 4;
+      s = readU16Str(view, off); const character = s.value; off = s.next;
+      const cash = view.getUint32(off, true); off += 4;
+      const level = view.getUint32(off, true); off += 4;
+      const fieldC = view.getUint32(off, true); off += 4;
+      s = readU16Str(view, off); const chapter = s.value; off = s.next;
+      // after chapter: skillPts, unk6(=6), xp, zero, then skill/pos blob
+      const after = data.slice(off);
+      let skillPts = 0, unk6 = 6, xp = 0, afterTail = after;
+      if (after.length >= 16) {
+        const av = new DataView(after.buffer, after.byteOffset, after.byteLength);
+        skillPts = av.getUint32(0, true);
+        unk6 = av.getUint32(4, true);
+        xp = av.getUint32(8, true);
+        afterTail = after.slice(16);
+      }
+      return { unk0, unk1, unk2, unk3, map, checkpoint, marker, preType, character, cash, level, fieldC, chapter, skillPts, unk6, xp, afterTail };
+    }
+    function rebuild101(m) {
+      const tail = new Uint8Array(m.afterTail || []);
+      const afterHead = concat([
+        u32(m.skillPts >>> 0),
+        u32((m.unk6 == null ? 6 : m.unk6) >>> 0),
+        u32(m.xp >>> 0),
+        u32(0)
+      ]);
+      const after = concat([afterHead, tail]);
+      const parts = [
+        new Uint8Array(4),
+        u32(m.unk0), u32(m.unk1), u32(m.unk2), u32(m.unk3),
+        writeU16Str(m.map), writeU16Str(m.checkpoint), writeU16Str(m.marker),
+        u32(m.preType), writeU16Str(m.character),
+        u32(m.cash), u32(m.level), u32(m.fieldC),
+        writeU16Str(m.chapter), after
+      ];
+      const body = concat(parts);
+      new DataView(body.buffer).setUint32(0, body.length - 4, true);
+      return body;
+    }
+
+    function readItem(data, off, withByte) {
+      let slot = 0;
+      if (withByte) { slot = data[off]; off += 1; }
+      const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+      let s = readU16Str(view, off); const name = s.value; off = s.next;
+      s = readU16Str(view, off); const mod = s.value; off = s.next;
+      if (off + 16 > data.length) throw new Error("Truncated item");
+      const unk = view.getUint32(off, true); off += 4;
+      const qty = view.getUint32(off, true); off += 4;
+      const dur = view.getFloat32(off, true); off += 4;
+      const lvl = view.getUint32(off, true); off += 4;
+      return { item: { slot, name, mod, unk, qty, dur, lvl }, next: off };
+    }
+    function writeItem(it, withByte) {
+      const parts = [];
+      if (withByte) parts.push(Uint8Array.of(it.slot & 0xff));
+      parts.push(writeU16Str(it.name), writeU16Str(it.mod || "None"));
+      parts.push(u32(it.unk >>> 0), u32(it.qty >>> 0), f32(it.dur), u32(it.lvl >>> 0));
+      return concat(parts);
+    }
+
+    // Item seed packing (same layout DISE uses):
+    // bits 0-2 color/rarity, bits 3-9 use-level (0-127), bits 10-31 attributes (0-4194303)
+    const ITEM_COLORS = ["White", "Green", "Blue", "Violet", "Orange"];
+    function decodeItemSeed(unk) {
+      const u = (unk >>> 0);
+      const color = u & 7;
+      return {
+        color,
+        colorName: ITEM_COLORS[color] || ("?" + color),
+        useLevel: (u >>> 3) & 0x7f,
+        attr: u >>> 10
+      };
+    }
+    function encodeItemSeed(useLevel, color, attr) {
+      return (
+        (((attr >>> 0) & 0x3fffff) << 10) |
+        (((useLevel >>> 0) & 0x7f) << 3) |
+        ((color >>> 0) & 7)
+      ) >>> 0;
+    }
+    function setItemUseLevel(it, useLevel) {
+      const d = decodeItemSeed(it.unk || 0);
+      it.unk = encodeItemSeed(useLevel, d.color, d.attr);
+    }
+    function setItemColor(it, color) {
+      const d = decodeItemSeed(it.unk || 0);
+      it.unk = encodeItemSeed(d.useLevel, color, d.attr);
+    }
+    function randomWeaponSeed(useLevel, color) {
+      const attr = (Math.random() * 0x3fffff) >>> 0;
+      return encodeItemSeed(useLevel, color, attr);
+    }
+
+    function parseInv(data) {
+      let off = 8;
+      const bags = [];
+      const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+      // weapons bag
+      {
+        const type = view.getUint32(off, true); const count = view.getUint32(off + 4, true); off += 8;
+        const items = [];
+        for (let i = 0; i < count; i++) { const r = readItem(data, off, false); items.push(r.item); off = r.next; }
+        bags.push({ kind: "weapons", hdr: "simple", type, items });
+      }
+      // backpack 1,0,1,count
+      if (off + 16 <= data.length) {
+        const a = view.getUint32(off, true), b = view.getUint32(off + 4, true);
+        const c = view.getUint32(off + 8, true), d = view.getUint32(off + 12, true);
+        if (a === 1 && b === 0 && c === 1 && d > 0 && d < 500) {
+          off += 16;
+          const items = [];
+          for (let i = 0; i < d; i++) { const r = readItem(data, off, false); items.push(r.item); off = r.next; }
+          bags.push({ kind: "backpack", hdr: "extended", type: c, items });
+        }
+      }
+      // storage 1,count with byte prefix
+      while (off + 8 <= data.length) {
+        const a = view.getUint32(off, true), b = view.getUint32(off + 4, true);
+        if (!(a === 1 && b > 0 && b < 200)) break;
+        const start = off; off += 8;
+        const items = [];
+        try {
+          for (let i = 0; i < b; i++) { const r = readItem(data, off, true); items.push(r.item); off = r.next; }
+        } catch {
+          off = start; break;
+        }
+        bags.push({ kind: "storage", hdr: "slotted", type: a, items });
+      }
+      return { bags, rest: data.slice(off), prefix: data.slice(0, 8) };
+    }
+
+    function charSkillKey() {
+      const raw = ((state.meta && state.meta.character) || "").replace(/^Type;/, "").toLowerCase();
+      if (SK[raw]) return raw;
+      if (raw.startsWith("sam")) return "samb";
+      if (raw.startsWith("xian")) return "xian";
+      if (raw.startsWith("john")) return "john";
+      if (raw.startsWith("log")) return "logan";
+      if (raw.startsWith("pur")) return "purna";
+      if (raw.startsWith("ryd") || raw.startsWith("har")) return "ryder";
+      if (raw.startsWith("aku")) return "akuro";
+      return raw;
+    }
+
+    /** Main skill tree block in sec102 trail: u32 4, u32 count, count*{u16 id,u16 rank,u32 pad} */
+    function findSkillBlock(rest) {
+      if (!rest || rest.length < 16) return null;
+      const view = new DataView(rest.buffer, rest.byteOffset, rest.byteLength);
+      const known = new Set();
+      const key = charSkillKey();
+      for (const row of (SK[key] || [])) known.add(row[0]);
+      for (const row of (SK._common || [])) known.add(row[0]);
+      for (const id of (SK._damage || [])) known.add(id);
+      for (const id of (SK._ammo || [])) known.add(id);
+      let best = null;
+      for (let o = 0; o + 8 < rest.length; o++) {
+        if (view.getUint32(o, true) !== 4) continue;
+        const count = view.getUint32(o + 4, true);
+        if (count < 5 || count > 200) continue;
+        if (o + 8 + count * 8 > rest.length) continue;
+        let ok = 0;
+        const entries = [];
+        for (let k = 0; k < count; k++) {
+          const b = o + 8 + k * 8;
+          const id = view.getUint16(b, true);
+          const rank = view.getUint16(b + 2, true);
+          const pad = view.getUint32(b + 4, true);
+          entries.push({ id, rank, pad });
+          if (known.has(id) && rank <= 100) ok++;
+        }
+        if (ok >= Math.max(4, count * 0.55)) {
+          const score = ok;
+          if (!best || score > best.score) best = { off: o, count, entries, score };
+        }
+      }
+      return best;
+    }
+
+    function writeSkillBlockIntoRest(rest, block) {
+      const out = new Uint8Array(rest.length - (block.count * 8) + (block.entries.length * 8));
+      out.set(rest.slice(0, block.off), 0);
+      const dv = new DataView(out.buffer);
+      dv.setUint32(block.off, 4, true);
+      dv.setUint32(block.off + 4, block.entries.length, true);
+      let o = block.off + 8;
+      for (const e of block.entries) {
+        dv.setUint16(o, e.id, true); o += 2;
+        dv.setUint16(o, e.rank, true); o += 2;
+        dv.setUint32(o, e.pad >>> 0, true); o += 4;
+      }
+      const tailStart = block.off + 8 + block.count * 8;
+      out.set(rest.slice(tailStart), o);
+      return out;
+    }
+
+    function ensureSkillEntries(block, wantIds) {
+      const have = new Set(block.entries.map((e) => e.id));
+      for (const id of wantIds) {
+        if (have.has(id)) continue;
+        block.entries.push({ id, rank: 0, pad: 0 });
+        have.add(id);
+      }
+    }
+
+    function applySkillRanks(mode) {
+      const block = findSkillBlock(state.inv.rest);
+      if (!block) throw new Error("Skill block not found in this save");
+      const key = charSkillKey();
+      const catalog = [...(SK[key] || []), ...(SK._common || [])];
+      const maxById = new Map(catalog.map((r) => [r[0], r[1]]));
+      const damageSet = new Set(SK._damage || []);
+      const ammoSet = new Set(SK._ammo || []);
+
+      if (mode === "max" || mode === "all") {
+        ensureSkillEntries(block, catalog.map((r) => r[0]));
+      }
+      if (mode === "damage" || mode === "all") {
+        ensureSkillEntries(block, [...damageSet]);
+      }
+      if (mode === "ammo" || mode === "all") {
+        ensureSkillEntries(block, [...ammoSet]);
+      }
+
+      let changed = 0;
+      for (const e of block.entries) {
+        const legitMax = maxById.get(e.id) || 3;
+        let target = e.rank;
+        if (mode === "max") target = Math.max(e.rank, legitMax);
+        if (mode === "damage" && damageSet.has(e.id)) target = Math.max(e.rank, 25);
+        if (mode === "ammo" && ammoSet.has(e.id)) target = Math.max(e.rank, 25);
+        if (mode === "all") {
+          target = Math.max(e.rank, legitMax);
+          if (damageSet.has(e.id) || ammoSet.has(e.id)) target = Math.max(target, 25);
+        }
+        if (target !== e.rank) { e.rank = target; changed++; }
+      }
+      state.inv.rest = writeSkillBlockIntoRest(state.inv.rest, block);
+      return { changed, total: block.entries.length, key };
+    }
+
+    function skillHintText() {
+      if (!state || !state.inv) return "Load a save to see skill block status.";
+      try {
+        const b = findSkillBlock(state.inv.rest);
+        if (!b) return "Skill block: not found (try a progressed .sar). Unspent points still work.";
+        const nz = b.entries.filter((e) => e.rank > 0).length;
+        return `Skill block OK for ${charSkillKey()}: ${b.entries.length} nodes (${nz} ranked).`;
+      } catch (e) {
+        return "Skill block: " + e.message;
+      }
+    }
+
+    function rebuildInv(inv) {
+      const parts = [];
+      // keep first 8 bytes but fix size later
+      parts.push(new Uint8Array(8));
+      for (const bag of inv.bags) {
+        if (bag.hdr === "simple") {
+          parts.push(u32(bag.type || 1), u32(bag.items.length));
+          for (const it of bag.items) parts.push(writeItem(it, false));
+        } else if (bag.hdr === "extended") {
+          parts.push(u32(1), u32(0), u32(1), u32(bag.items.length));
+          for (const it of bag.items) parts.push(writeItem(it, false));
+        } else if (bag.hdr === "slotted") {
+          parts.push(u32(1), u32(bag.items.length));
+          for (const it of bag.items) parts.push(writeItem(it, true));
+        }
+      }
+      parts.push(inv.rest);
+      const body = concat(parts);
+      // prefix: innerSize, 0
+      new DataView(body.buffer).setUint32(0, body.length - 4, true);
+      new DataView(body.buffer).setUint32(4, 0, true);
+      return body;
+    }
+
+    function isStackable(it) {
+      // Blueprints/collectables/quest items must stay qty 1 — stacking them makes the game ignore them
+      if (/^(Craftplan_|CraftPlan_|Collectable_|QuestItem_|Letter_|Marcus_|Tunnels_|Photo_)/i.test(it.name)) return false;
+      return /^(CraftPart_|Medkit_|Powerup_|Throwable_|Food_|Ammo_)/i.test(it.name) || it.dur === -1;
+    }
+    function qtyForName(name) {
+      if (/^(Craftplan_|CraftPlan_|Collectable_|QuestItem_|Letter_|Marcus_|Tunnels_|Photo_|Melee_|Firearm_)/i.test(name)) return 1;
+      if (/^Ammo_/i.test(name)) return 9999;
+      return D.MAX_STACK;
+    }
+    function fixBlueprintStacks() {
+      let n = 0;
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (/^(Craftplan_|CraftPlan_)/i.test(it.name)) {
+            if (it.qty !== 1) { it.qty = 1; n++; }
+            it.dur = -1;
+            it.mod = "None";
+            it.lvl = 0;
+          }
+        }
+      }
+      return n;
+    }
+    function makeStackItem(name, qty) {
+      const q = qty != null ? qty : qtyForName(name);
+      const weapon = /^(Melee_|Firearm_)/i.test(name);
+      const useLv = Math.min(D.MAX_LEVEL || 70, Math.max(1, (state.meta && state.meta.level) || D.MAX_LEVEL || 70));
+      return {
+        slot: 0,
+        name,
+        mod: "None",
+        unk: weapon ? randomWeaponSeed(useLv, 4) : 0,
+        qty: weapon ? 1 : q,
+        dur: weapon ? 9999 : -1,
+        lvl: weapon ? 3 : 0
+      };
+    }
+    function backpack() {
+      let bag = state.inv.bags.find((b) => b.kind === "backpack");
+      if (!bag) {
+        bag = { kind: "backpack", hdr: "extended", type: 1, items: [] };
+        state.inv.bags.splice(1, 0, bag);
+      }
+      return bag;
+    }
+    function addNamesToBackpack(names, qty) {
+      const bag = backpack();
+      const have = new Set(bag.items.map((i) => i.name.toLowerCase()));
+      let added = 0;
+      for (const n of names) {
+        if (!n) continue;
+        if (have.has(n.toLowerCase())) {
+          // bump existing stackables to requested qty
+          const it = bag.items.find((i) => i.name.toLowerCase() === n.toLowerCase());
+          if (it && isStackable(it)) {
+            const want = qty != null ? qty : qtyForName(n);
+            if (it.qty < want) { it.qty = want; added++; }
+          }
+          continue;
+        }
+        bag.items.push(makeStackItem(n, qty));
+        have.add(n.toLowerCase());
+        added++;
+      }
+      return added;
+    }
+    function maxStacks() {
+      let n = 0;
+      n += fixBlueprintStacks();
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (/^Ammo_/i.test(it.name)) {
+            if (it.qty < 9999) { it.qty = 9999; n++; }
+            it.dur = -1;
+          } else if (/^(Craftplan_|CraftPlan_|Collectable_|QuestItem_)/i.test(it.name)) {
+            if (it.qty !== 1) { it.qty = 1; n++; }
+          } else if (isStackable(it)) {
+            if (it.qty < D.MAX_STACK) { it.qty = D.MAX_STACK; n++; }
+          } else if (/^Firearm_/i.test(it.name)) {
+            if (it.qty < 999) { it.qty = 999; n++; }
+          }
+        }
+      }
+      n += addNamesToBackpack([
+        ...(D.CRAFT_PARTS || []),
+        ...(D.AMMO || []),
+        ...(D.THROWABLES || []),
+        ...(D.CONSUMABLES || [])
+      ], D.MAX_STACK);
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (/^Ammo_/i.test(it.name)) { it.qty = 9999; it.dur = -1; }
+          if (/^(Craftplan_|CraftPlan_)/i.test(it.name)) { it.qty = 1; it.dur = -1; }
+        }
+      }
+      return n;
+    }
+    function pickWeaponMod(name) {
+      if (/Firearm_.*(Shotgun)/i.test(name)) return "Craftplan_Shockshotgun";
+      if (/Firearm_.*(Rifle|Sniper|Auto|Burst)/i.test(name)) return "Craftplan_Shockrifle";
+      if (/Firearm_.*(Pistol|Colt|Magnum|Desert|M9|Revolver)/i.test(name)) return "Craftplan_Shockgun";
+      if (/Firearm_/i.test(name)) return "Craftplan_Teslacraft";
+      if (/Knife|Dirk|Machete|Blade|Axe|Cleaver|Katana|Sickle/i.test(name)) return "Craftplan_Poisonx4";
+      if (/Hammer|Mace|Sledge|Bat|Crowbar|Baton|Wrench|Shovel/i.test(name)) return "Craftplan_Electricstormstrong";
+      if (/Chainsaw/i.test(name)) return "Craftplan_Highvoltagecraft";
+      return "Craftplan_Impactcraft";
+    }
+    // Infinite ammo = huge firearm qty (same bit pattern working guns use in-game).
+    const INFINITE_AMMO_QTY = 0x33333333; // 858993459
+    function setFirearmInfiniteAmmo(it) {
+      if (!it || !/^Firearm_/i.test(it.name)) return false;
+      it.qty = INFINITE_AMMO_QTY;
+      it.dur = 9999;
+      return true;
+    }
+    function godifyWeapons() {
+      let n = 0;
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (!/^(Melee_|Firearm_)/i.test(it.name)) continue;
+          it.mod = pickWeaponMod(it.name);
+          it.lvl = 3; // workbench upgrade
+          setItemColor(it, 4); // Orange
+          it.dur = 9999;
+          if (/^Firearm_/i.test(it.name)) it.qty = Math.max(it.qty || 0, 999);
+          else it.qty = 1;
+          n++;
+        }
+      }
+      return n;
+    }
+    function infiniteAmmoFirearms() {
+      let n = 0;
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (setFirearmInfiniteAmmo(it)) n++;
+        }
+      }
+      return n;
+    }
+    function setAllWeaponUpgrade(upg) {
+      let n = 0;
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (/^(Melee_|Firearm_)/i.test(it.name)) { it.lvl = upg; n++; }
+        }
+      }
+      return n;
+    }
+    function setAllWeaponColor(color) {
+      let n = 0;
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (!/^(Melee_|Firearm_)/i.test(it.name)) continue;
+          setItemColor(it, color);
+          n++;
+        }
+      }
+      return n;
+    }
+    function fillCategory(key) {
+      const list = D[key] || [];
+      const qty = key === "AMMO" ? 9999 : (key === "CRAFTPLANS" || key === "COLLECTABLES" || key === "QUEST_ITEMS" || key === "WEAPONS" ? 1 : D.MAX_STACK);
+      return addNamesToBackpack(list, qty);
+    }
+    function repairWeapons() {
+      let n = 0;
+      for (const bag of state.inv.bags) {
+        for (const it of bag.items) {
+          if (/^(Melee_|Firearm_)/i.test(it.name)) { it.dur = 9999; if (it.lvl < 3) it.lvl = 3; n++; }
+        }
+      }
+      return n;
+    }
+
+    function syncSections() {
+      const s101 = state.sections.find((s) => s.id === 101);
+      const s102 = state.sections.find((s) => s.id === 102);
+      s101.data = rebuild101(state.meta);
+      if (s102) s102.data = rebuildInv(state.inv);
+    }
+
+    async function gunzip(bytes) {
+      const ds = new DecompressionStream("gzip");
+      return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer());
+    }
+    async function gzip(bytes) {
+      const cs = new CompressionStream("gzip");
+      return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(cs)).arrayBuffer());
+    }
+
+    function fillSelect(sel, list, current, valueKey, labelFn) {
+      sel.innerHTML = "";
+      let found = false;
+      for (const row of list) {
+        const opt = document.createElement("option");
+        opt.value = row[valueKey];
+        opt.textContent = labelFn(row);
+        if (row[valueKey] === current) { opt.selected = true; found = true; }
+        sel.appendChild(opt);
+      }
+      if (current && !found) {
+        const opt = document.createElement("option");
+        opt.value = current; opt.textContent = current + " (from save)"; opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
+
+    function render() {
+      const m = state.meta;
+      const name = (m.character || "").replace(/^Type;/, "");
+      $("metaGrid").innerHTML = [
+        ["Character", name], ["Map", m.map], ["Checkpoint", m.checkpoint || m.marker || "—"],
+        ["Chapter", m.chapter], ["Level", m.level], ["Cash", m.cash], ["XP", m.xp],
+        ["Skill pts", m.skillPts], ["Backpack items", backpack().items.length]
+      ].map(([k, v]) => `<div class="meta-item"><span>${k}</span><b>${v}</b></div>`).join("");
+
+      $("fLevel").value = m.level;
+      $("fCash").value = m.cash;
+      $("fXp").value = m.xp;
+      if ($("fSkillPts")) $("fSkillPts").value = m.skillPts || 0;
+      if ($("fSkillPts2")) $("fSkillPts2").value = m.skillPts || 0;
+      fillSelect($("fMap"), D.MAPS, m.map, "id", (r) => r.label + "  [" + r.id + "]");
+      fillSelect($("fCheckpoint"), D.CHECKPOINTS, m.checkpoint || m.marker, "id", (r) => r.label + "  [" + r.id + "]");
+      fillSelect($("fChapter"), D.CHAPTERS, m.chapter, "id", (r) => r.label);
+      $("fCheckpointCustom").value = "";
+      $("fMarker").value = m.marker || "";
+
+      const invRows = [];
+      state.inv.bags.forEach((bag, bi) => {
+        bag.items.forEach((it, ii) => {
+          const seed = decodeItemSeed(it.unk || 0);
+          const isWep = /^(Melee_|Firearm_)/i.test(it.name);
+          const isGun = /^Firearm_/i.test(it.name);
+          const act = isGun
+            ? `<button type="button" class="btn btn-lime" style="padding:0.2rem 0.45rem;font-size:0.75rem" data-inf-ammo="${bi}:${ii}">∞ ammo</button>`
+            : "";
+          invRows.push(
+            `<tr><td>${bag.kind}</td><td>${it.name}</td><td>${it.mod}</td><td>${it.qty}</td><td>${Number.isFinite(it.dur) ? it.dur.toFixed(1) : it.dur}</td><td>${isWep ? seed.colorName : "—"}</td><td>${it.lvl}</td><td>${act}</td></tr>`
+          );
+        });
+      });
+      $("invBody").innerHTML = invRows.join("") || "<tr><td colspan='8'>Empty</td></tr>";
+      $("invBody").querySelectorAll("[data-inf-ammo]").forEach((btn) => {
+        btn.onclick = () => {
+          const [bi, ii] = String(btn.getAttribute("data-inf-ammo") || "").split(":").map(Number);
+          const it = state.inv.bags[bi] && state.inv.bags[bi].items[ii];
+          if (!setFirearmInfiniteAmmo(it)) return;
+          syncSections();
+          render();
+          setStatus(`Infinite ammo on ${it.name}`, "ok");
+        };
+      });
+
+      if ($("skillBlockHint")) $("skillBlockHint").textContent = skillHintText();
+
+      renderAddGrid();
+    }
+
+    function renderAddGrid() {
+      const cat = $("addCat").value;
+      const filter = ($("addFilter").value || "").toLowerCase();
+      const list = D[cat] || [];
+      $("addGrid").innerHTML = list.filter((id) => id.toLowerCase().includes(filter)).map((id) =>
+        `<label class="check"><input type="checkbox" data-id="${id}" /><span>${id}</span></label>`
+      ).join("");
+    }
+
+    async function loadBytes(buf, name) {
+      const raw = new Uint8Array(buf);
+      if (raw[0] !== 0x1f || raw[1] !== 0x8b) throw new Error("Not a gzip .sar/.sav");
+      const plain = await gunzip(raw);
+      const parsed = parseSections(plain);
+      const s101 = parsed.sections.find((s) => s.id === 101);
+      const s102 = parsed.sections.find((s) => s.id === 102);
+      if (!s101 || !s102) throw new Error("Missing character/inventory sections");
+      state = {
+        header: parsed.header,
+        sections: parsed.sections,
+        meta: parse101(s101.data),
+        inv: parseInv(s102.data)
+      };
+      fileName = name || fileName;
+      $("btnDownload").disabled = false;
+      $("btnClear").disabled = false;
+      $("workspace").classList.add("on");
+      render();
+      setStatus(`Loaded ${fileName} · backpack ${backpack().items.length} items`, "ok");
+    }
+
+    // tabs
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.onclick = () => {
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+        tab.classList.add("active");
+        $("view-" + tab.dataset.tab).classList.add("active");
+      };
+    });
+
+    $("btnApplyChar").onclick = () => {
+      state.meta.level = Math.max(1, Math.min(D.MAX_LEVEL, parseInt($("fLevel").value, 10) || 1));
+      state.meta.cash = Math.max(0, parseInt($("fCash").value, 10) || 0);
+      state.meta.xp = Math.max(0, parseInt($("fXp").value, 10) || 0);
+      if ($("fSkillPts")) state.meta.skillPts = Math.max(0, parseInt($("fSkillPts").value, 10) || 0);
+      syncSections(); render();
+      setStatus(`Applied Lv${state.meta.level} · cash ${state.meta.cash} · XP ${state.meta.xp} · skill pts ${state.meta.skillPts}`, "ok");
+    };
+    $("btnApplyWorld").onclick = () => {
+      state.meta.map = $("fMap").value;
+      const custom = ($("fCheckpointCustom").value || "").trim();
+      state.meta.checkpoint = custom || $("fCheckpoint").value;
+      state.meta.chapter = $("fChapter").value;
+      state.meta.marker = ($("fMarker").value || "").trim();
+      syncSections(); render();
+      setStatus("Map / checkpoint / chapter updated", "ok");
+    };
+
+    function maxLevelBundle() {
+      // Game XP curve: ~24,396,497 XP to reach level 70 (Purna/Logan tables)
+      state.meta.level = D.MAX_LEVEL;
+      state.meta.xp = Math.max(state.meta.xp || 0, 25000000);
+      state.meta.skillPts = Math.max(state.meta.skillPts || 0, D.MAX_SKILL_POINTS || 200);
+      if (state.meta.unk6 == null) state.meta.unk6 = 6;
+    }
+    $("qMaxLevel").onclick = () => {
+      maxLevelBundle();
+      syncSections(); render();
+      setStatus(`Level ${D.MAX_LEVEL} + XP + ${state.meta.skillPts} skill pts — download & replace the .sar`, "ok");
+    };
+    $("qMaxCash").onclick = () => {
+      state.meta.cash = 999999;
+      syncSections(); render();
+      setStatus(`Cash set to ${state.meta.cash}`, "ok");
+    };
+    $("qMaxXp").onclick = () => { state.meta.xp = 50000000; syncSections(); render(); setStatus("XP raised", "ok"); };
+    $("qMaxStacks").onclick = $("btnMaxStacks2").onclick = () => {
+      const n = maxStacks(); syncSections(); render();
+      setStatus(`Maxed/filled ${n} entries (parts, ammo, throwables, consumables)`, "ok");
+    };
+    $("btnRepair").onclick = () => {
+      const n = repairWeapons(); syncSections(); render();
+      setStatus(`Repaired ${n} weapons`, "ok");
+    };
+    if ($("btnGodWeapons")) $("btnGodWeapons").onclick = () => {
+      const n = godifyWeapons(); syncSections(); render();
+      setStatus(`Godified ${n} weapons (Orange + workbench upg3 + mod)`, "ok");
+    };
+    function runInfiniteAmmo() {
+      const n = infiniteAmmoFirearms();
+      syncSections(); render();
+      setStatus(`Infinite ammo on ${n} firearms`, "ok");
+    }
+    if ($("btnInfiniteAmmo")) $("btnInfiniteAmmo").onclick = runInfiniteAmmo;
+    if ($("qInfiniteAmmo")) $("qInfiniteAmmo").onclick = runInfiniteAmmo;
+    if ($("btnWepOrange")) $("btnWepOrange").onclick = () => {
+      const n = setAllWeaponColor(4); syncSections(); render();
+      setStatus(`Set Orange rarity on ${n} weapons`, "ok");
+    };
+    if ($("btnWepUpg1")) $("btnWepUpg1").onclick = () => {
+      const n = setAllWeaponUpgrade(1); syncSections(); render();
+      setStatus(`Set workbench upgrade 1 on ${n} weapons`, "ok");
+    };
+    if ($("btnWepUpg3")) $("btnWepUpg3").onclick = () => {
+      const n = setAllWeaponUpgrade(3); syncSections(); render();
+      setStatus(`Set workbench upgrade 3 (max) on ${n} weapons`, "ok");
+    };
+    $("qAllPlans").onclick = () => {
+      let n = fillCategory("CRAFTPLANS");
+      n += fixBlueprintStacks();
+      syncSections(); render();
+      setStatus(`Blueprints: ${n} added/fixed (qty must be 1)`, "ok");
+    };
+    $("qAllAmmo").onclick = () => {
+      const n = fillCategory("AMMO"); syncSections(); render();
+      setStatus(`Ammo: ${n} added/updated`, "ok");
+    };
+    $("qAllThrow").onclick = () => {
+      const n = fillCategory("THROWABLES"); syncSections(); render();
+      setStatus(`Throwables: ${n} added/updated`, "ok");
+    };
+    $("qAllCollect").onclick = () => {
+      const n = fillCategory("COLLECTABLES"); syncSections(); render();
+      setStatus(`Collectables: ${n} added/updated`, "ok");
+    };
+    $("qKit").onclick = () => {
+      maxLevelBundle();
+      state.meta.cash = 999999;
+      let n = 0;
+      n += fillCategory("CRAFT_PARTS");
+      n += fillCategory("AMMO");
+      n += fillCategory("THROWABLES");
+      n += fillCategory("CONSUMABLES");
+      n += fillCategory("CRAFTPLANS");
+      n += fillCategory("COLLECTABLES");
+      n += fillCategory("QUEST_ITEMS");
+      maxStacks();
+      fixBlueprintStacks();
+      godifyWeapons();
+      syncSections(); render();
+      setStatus(`Full kit applied (${n}+ items).`, "ok");
+    };
+    if ($("qMaxSkillPts")) $("qMaxSkillPts").onclick = () => {
+      state.meta.skillPts = D.MAX_SKILL_POINTS || 200;
+      syncSections(); render();
+      setStatus("Skill points set to " + state.meta.skillPts, "ok");
+    };
+    if ($("btnApplySkills")) $("btnApplySkills").onclick = () => {
+      state.meta.skillPts = Math.max(0, parseInt($("fSkillPts2").value, 10) || 0);
+      if ($("fSkillPts")) $("fSkillPts").value = state.meta.skillPts;
+      syncSections(); render();
+      setStatus("Skill points applied: " + state.meta.skillPts, "ok");
+    };
+    function runSkillMode(mode, label) {
+      try {
+        const r = applySkillRanks(mode);
+        state.meta.skillPts = Math.max(state.meta.skillPts || 0, D.MAX_SKILL_POINTS || 200);
+        syncSections(); render();
+        setStatus(`${label}: ${r.changed} ranks updated (${r.total} nodes).`, "ok");
+      } catch (err) {
+        setStatus(String(err.message || err), "err");
+      }
+    }
+    if ($("btnMaxSkillRanks")) $("btnMaxSkillRanks").onclick = () => runSkillMode("max", "Max skill ranks");
+    if ($("btnTweakDamage")) $("btnTweakDamage").onclick = () => runSkillMode("damage", "Boost weapon damage (beta)");
+    if ($("btnTweakAmmo")) $("btnTweakAmmo").onclick = () => runSkillMode("ammo", "Unlimited ammo tweak (beta)");
+    if ($("btnTweakAll")) $("btnTweakAll").onclick = () => runSkillMode("all", "All skill tweaks (beta)");
+
+    $("addCat").onchange = $("addFilter").oninput = renderAddGrid;
+    $("btnCheckAll").onclick = () => $("addGrid").querySelectorAll("input").forEach((c) => { c.checked = true; });
+    $("btnCheckNone").onclick = () => $("addGrid").querySelectorAll("input").forEach((c) => { c.checked = false; });
+    $("btnAddSelected").onclick = () => {
+      const ids = [...$("addGrid").querySelectorAll("input:checked")].map((c) => c.dataset.id);
+      const cat = $("addCat").value;
+      const qty = cat === "CRAFTPLANS" || cat === "COLLECTABLES" || cat === "QUEST_ITEMS" || cat === "WEAPONS" ? 1 : D.MAX_STACK;
+      const n = addNamesToBackpack(ids, qty);
+      if (cat === "WEAPONS") {
+        for (const it of backpack().items) {
+          if (ids.includes(it.name) && /^(Melee_|Firearm_)/.test(it.name)) { it.dur = 9999; it.lvl = 3; it.qty = 1; }
+        }
+      }
+      syncSections(); render();
+      setStatus(`Added/updated ${n} selected items`, "ok");
+    };
+    if ($("btnAddCatAll")) $("btnAddCatAll").onclick = () => {
+      const n = fillCategory($("addCat").value);
+      syncSections(); render();
+      setStatus(`Category fill: ${n} added/updated`, "ok");
+    };
+
+    async function downloadSave() {
+      syncSections();
+      const plain = buildFile(state.header, state.sections);
+      const gz = await gzip(plain);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([gz], { type: "application/octet-stream" }));
+      a.download = fileName; a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus("Downloaded " + fileName, "ok");
+    }
+
+    const drop = $("drop"), fileInput = $("file");
+    drop.onclick = () => fileInput.click();
+    drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("drag"); };
+    drop.ondragleave = () => drop.classList.remove("drag");
+    drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("drag"); const f = e.dataTransfer.files[0]; if (f) readFile(f); };
+    fileInput.onchange = () => { const f = fileInput.files[0]; fileInput.value = ""; if (f) readFile(f); };
+    function readFile(file) {
+      const r = new FileReader();
+      r.onload = async () => { try { await loadBytes(r.result, file.name); } catch (e) { setStatus(String(e.message || e), "err"); console.error(e); } };
+      r.readAsArrayBuffer(file);
+    }
+    $("btnDownload").onclick = () => downloadSave().catch((e) => setStatus(String(e.message || e), "err"));
+    $("btnClear").onclick = () => {
+      state = null; $("workspace").classList.remove("on");
+      $("btnDownload").disabled = true; $("btnClear").disabled = true; setStatus("Cleared.");
+    };
+  </script>
+</body>
+</html>
