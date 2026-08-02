@@ -867,28 +867,39 @@
 
     <section id="landing" class="landing">
       <h2 class="landing-title">Load World</h2>
-      <p class="muted">Quit Palworld before saving. Use <strong>Chrome</strong> or <strong>Edge</strong> over HTTPS.</p>
+      <p class="muted">Quit Palworld before saving. Use <strong>Chrome</strong> or <strong>Edge</strong>.</p>
 
-      <div class="notice" style="margin-top:14px;text-align:left;max-width:640px;margin-left:auto;margin-right:auto;">
-        <strong>Chrome blocks AppData</strong> for folder open. That is normal.
+      <div id="localBridgePanel" class="notice ok hidden" style="margin-top:14px;text-align:left;max-width:640px;margin-left:auto;margin-right:auto;">
+        <strong>Local bridge active</strong> — open your real save folder in AppData. No Desktop copy.
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="text" id="savePathInput" placeholder="Paste world folder path or Level.sav path…" style="flex:1;min-width:220px;padding:10px 12px;border-radius:8px;border:1px solid #405174;background:#0f1522;color:#e9eef8;font-size:.9rem;">
+          <button type="button" class="btn primary" id="locateFolderBtn" style="font-size:1.05rem;padding:12px 18px;">Locate folder…</button>
+          <button type="button" class="btn" id="loadPathBtn" style="padding:12px 18px;">Load path</button>
+        </div>
+        <p class="muted" style="margin:10px 0 0;font-size:.82rem;">Steam default: <code>%LOCALAPPDATA%\Pal\Saved\SaveGames\&lt;steamId&gt;\&lt;worldId&gt;</code></p>
+      </div>
+
+      <div id="browserOnlyNotice" class="notice" style="margin-top:14px;text-align:left;max-width:640px;margin-left:auto;margin-right:auto;">
+        <strong>Locate your save folder</strong> — AppData / Packages work. No Desktop copy.
         <ul style="margin:8px 0 0;padding-left:18px;font-size:.88rem;color:#c5d0e0;">
-          <li><strong>Steam:</strong> copy the world folder to Desktop → Open world folder</li>
-          <li><strong>Game Pass:</strong> quit Palworld + Xbox cloud sync, copy <code>…\Packages\PocketpairInc.Palworld_…\SystemAppData\wgs</code> to Desktop → <strong>Open Game Pass (wgs)</strong>. Save writes back into that copy — then copy the folder back into Packages.</li>
-          <li><strong>Or:</strong> <strong>Pick Level.sav file</strong> (Steam-style only). Save downloads the edited file.</li>
+          <li><strong>Steam:</strong> <strong>Locate save folder</strong> → <code>%LOCALAPPDATA%\Pal\Saved\SaveGames\&lt;steamId&gt;\&lt;worldId&gt;</code></li>
+          <li><strong>Game Pass:</strong> quit Palworld + Xbox cloud sync → <strong>Open Game Pass (wgs)</strong> → <code>…\Packages\PocketpairInc.Palworld_…\SystemAppData\wgs</code> (or the <code>user_*</code> folder)</li>
+          <li><strong>Game Pass save:</strong> gets <code>gzo-xgp-patch.zip</code> — extract into that same <code>user_*</code> folder (overwrite). Includes updated <code>containers.index</code>.</li>
         </ul>
       </div>
 
       <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-        <button type="button" class="btn primary" id="openFolderBtn" style="font-size:1.05rem;padding:12px 22px;">Open world folder (Desktop copy)</button>
-        <button type="button" class="btn" id="openGamePassBtn" style="font-size:1.05rem;padding:12px 22px;border-color:#6fd39a;color:#c8f5dc;">Open Game Pass (wgs)</button>
+        <button type="button" class="btn primary" id="locateSaveFolderBtn" style="font-size:1.05rem;padding:12px 22px;">Locate save folder</button>
+        <button type="button" class="btn" id="openFolderBtn" style="font-size:1.05rem;padding:12px 22px;">Open writable folder</button>
+        <button type="button" class="btn" id="openGamePassBtn" style="font-size:1.05rem;padding:12px 22px;border-color:#6fd39a;color:#c8f5dc;">Open Game Pass (Packages OK)</button>
         <button type="button" class="btn" id="openFilesBtn" style="font-size:1.05rem;padding:12px 22px;">Pick Level.sav file…</button>
       </div>
 
       <div id="worldListWrap" style="margin-top:16px; text-align:left;">
-        <div id="worldList" class="world-list"><div class="empty">Folder mode writes a backup next to the save. File mode downloads the edited Level.sav.</div></div>
+        <div id="worldList" class="world-list"><div class="empty">Looking for local bridge…</div></div>
       </div>
 
-      <p class="muted" style="margin-top:14px;font-size:.82rem;">Folder save copies the whole world into <code>gzo-backups\…</code> first (Level, meta, local, Players), then overwrites.</p>
+      <p class="muted" style="margin-top:14px;font-size:.82rem;">Locate mode: Save dialog writes back into your folder. Writable-folder mode (non-AppData) keeps in-folder backups under <code>gzo-backups\…</code>.</p>
     </section>
 
     <section id="workspace" class="hidden">
@@ -1403,7 +1414,9 @@
 
   <script src="gzo-data.js"></script>
   <script>
-    const API = ""; // unused in browser pack; kept so stray refs don't throw
+    const API = ""; // same-origin when using Open Palworld Editor.bat (localhost:8765)
+    let localBridge = false;
+    let localCanPickFolder = false;
 
     const state = {
       sessionId: null,
@@ -1423,6 +1436,7 @@
       savePath: null,
       folderName: "",
       browserSession: null,
+      localSession: false,
       palNames: window.PAL_NAMES || {},
       palPassives: window.PAL_PASSIVES || {},
       palWork: window.PAL_WORK || {},
@@ -3208,6 +3222,9 @@
       if ($("openFolderBtn")) $("openFolderBtn").disabled = true;
       if ($("openGamePassBtn")) $("openGamePassBtn").disabled = true;
       if ($("openFilesBtn")) $("openFilesBtn").disabled = true;
+      if ($("locateSaveFolderBtn")) $("locateSaveFolderBtn").disabled = true;
+      if ($("locateFolderBtn")) $("locateFolderBtn").disabled = true;
+      if ($("loadPathBtn")) $("loadPathBtn").disabled = true;
       if ($("saveBtn")) $("saveBtn").disabled = true;
     }
 
@@ -3242,6 +3259,9 @@
       if ($("openFolderBtn")) $("openFolderBtn").disabled = false;
       if ($("openGamePassBtn")) $("openGamePassBtn").disabled = false;
       if ($("openFilesBtn")) $("openFilesBtn").disabled = false;
+      if ($("locateSaveFolderBtn")) $("locateSaveFolderBtn").disabled = false;
+      if ($("locateFolderBtn")) $("locateFolderBtn").disabled = !localCanPickFolder;
+      if ($("loadPathBtn")) $("loadPathBtn").disabled = false;
       syncPendingSave();
     }
 
@@ -3254,14 +3274,14 @@
     async function checkBridge(opts) {
       const keepBusy = !!(opts && opts.keepBusy);
       try {
-        if (!window.GzoBrowser) throw new Error("Engine missing — gzo-data.js failed to load");
-        if (!window.GzoBrowser.supportsFolderPicker()) {
-          $("bridgeNotice").classList.remove("hidden", "ok");
-          $("bridgeNotice").classList.add("bad");
-          $("bridgeNotice").textContent =
-            "Chrome or Edge is required to open a world folder and write backups on this page.";
-          return false;
+        if (localBridge) {
+          const r = await fetch(API + "/api/health", { cache: "no-store" });
+          const j = await r.json();
+          if (!j?.ok) throw new Error("Local bridge is not responding. Restart Open Palworld Editor.bat.");
+          $("bridgeNotice").classList.add("hidden");
+          return true;
         }
+        if (!window.GzoBrowser) throw new Error("Engine missing — gzo-data.js failed to load");
         if (!window.GzoBrowser.isReady()) {
           showBusy(
             "Loading save engine",
@@ -5366,7 +5386,8 @@
 
     async function applyLoadedSession(j) {
       state.sessionId = j.sessionId;
-      state.browserSession = j;
+      state.browserSession = j._browser ? j : null;
+      state.localSession = !!(j && j.sessionId && !j._browser && localBridge);
       state.pals = j.pals || [];
       state.destinations = j.destinations || [];
       ensureGuildDestination();
@@ -5416,11 +5437,132 @@
       const guildNote = guildN
         ? ` Guild Storage: ${guildN} (open the Guild Storage tab).`
         : " Guild Storage empty or *_dps.sav not loaded.";
+      const pathNote = state.localSession && state.savePath
+        ? ` Writing to ${state.savePath}`
+        : "";
       setStatus(
-        `Loaded ${visible} pals (${j.players} players).${guildNote}${orphanNote}`,
+        `Loaded ${visible} pals (${j.players} players).${guildNote}${orphanNote}${pathNote}`,
         "ok"
       );
       $("bridgeNotice").classList.add("hidden");
+      if ($("saveBtn")) {
+        $("saveBtn").textContent = state.localSession
+          ? "Save (write to AppData)"
+          : j.locateMode || j._browser?.locateMode || j._browser?.downloadOnly
+            ? "Save Level.sav…"
+            : "Save Level.sav";
+      }
+    }
+
+    async function loadFromLocateFolder() {
+      if (!window.GzoBrowser) {
+        setStatus("Engine missing — gzo-data.js failed to load.", "bad");
+        return;
+      }
+      if (typeof window.GzoBrowser.openWorldFolderLocate !== "function") {
+        setStatus("Locate support missing — re-upload gzo-data.js from the latest build.", "bad");
+        return;
+      }
+      try {
+        const j = await window.GzoBrowser.openWorldFolderLocate((msg) => {
+          if (msg === "__HIDE_BUSY__") {
+            hideBusy();
+            return;
+          }
+          if (msg === "__SHOW_BUSY__") {
+            showBusy("Loading world", "Working…", {
+              hint: "AppData is OK. Large worlds can take a minute.",
+            });
+            return;
+          }
+          if (/Locate your world/i.test(msg)) return;
+          if ($("busyOverlay")?.classList.contains("hidden")) {
+            showBusy("Loading world", msg, {
+              hint: "Reading from your save folder. No Desktop copy needed.",
+            });
+          } else {
+            setBusyMsg(msg, "Loading world");
+          }
+        });
+        if (!j.ok) throw new Error(j.error || "Load failed");
+        showBusy("Loading world", "Finishing up…", { hint: false });
+        await applyLoadedSession(j);
+        if ($("saveBtn")) $("saveBtn").textContent = "Save Level.sav…";
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          setStatus("Folder locate cancelled.");
+          return;
+        }
+        $("landing").classList.remove("hidden");
+        $("workspace").classList.add("hidden");
+        setStatus(String(err.message || err), "bad");
+      } finally {
+        hideBusy();
+      }
+    }
+
+    async function loadFromLocalPath(inputPath) {
+      const pathVal = String(inputPath || "").trim();
+      if (!pathVal) {
+        setStatus("Paste a world folder path, or click Locate folder…", "bad");
+        return;
+      }
+      if (!(await checkBridge())) return;
+      try {
+        showBusy("Loading world", "Reading save from disk…", {
+          hint: "Local bridge reads AppData directly — no Desktop copy.",
+        });
+        const r = await fetch(API + "/api/load-path", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: pathVal }),
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || "Load failed");
+        showBusy("Loading world", "Finishing up…", { hint: false });
+        await applyLoadedSession(j);
+        if ($("savePathInput")) $("savePathInput").value = j.savePath || pathVal;
+      } catch (err) {
+        $("landing").classList.remove("hidden");
+        $("workspace").classList.add("hidden");
+        setStatus(String(err.message || err), "bad");
+      } finally {
+        hideBusy();
+      }
+    }
+
+    async function locateAndLoadFolder() {
+      if (!localBridge) {
+        setStatus("Start Open Palworld Editor.bat to locate AppData folders.", "bad");
+        return;
+      }
+      if (!(await checkBridge())) return;
+      try {
+        setStatus("Opening folder dialog…");
+        const startPath = ($("savePathInput")?.value || "").trim() || undefined;
+        const r = await fetch(API + "/api/pick-folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ startPath }),
+        });
+        const j = await r.json();
+        if (j.cancelled) {
+          setStatus("Folder pick cancelled.");
+          return;
+        }
+        if (!j.ok) throw new Error(j.error || "Folder pick failed");
+        if ($("savePathInput")) $("savePathInput").value = j.folder || "";
+        if (!j.hasLevelSav) {
+          setStatus(
+            `No Level.sav in that folder. Pick the world folder that contains Level.sav.\n${j.folder || ""}`,
+            "bad"
+          );
+          return;
+        }
+        await loadFromLocalPath(j.levelSav || j.folder);
+      } catch (err) {
+        setStatus(String(err.message || err), "bad");
+      }
     }
 
     async function loadFromFolderPicker() {
@@ -5472,23 +5614,26 @@
         setStatus("Engine missing — gzo-data.js failed to load.", "bad");
         return;
       }
-      if (!window.GzoBrowser.supportsFolderPicker()) {
-        $("bridgeNotice").classList.remove("hidden", "ok");
-        $("bridgeNotice").classList.add("bad");
-        $("bridgeNotice").textContent =
-          "Chrome or Edge is required to open a Game Pass wgs folder on this page.";
-        return;
-      }
       if (typeof window.GzoBrowser.openGamePassFolder !== "function") {
         setStatus("Game Pass support missing — rebuild/re-upload gzo-data.js.", "bad");
         return;
       }
       try {
         const j = await window.GzoBrowser.openGamePassFolder((msg) => {
-          if (/Pick your Game Pass/i.test(msg)) return;
+          if (msg === "__HIDE_BUSY__") {
+            hideBusy();
+            return;
+          }
+          if (msg === "__SHOW_BUSY__") {
+            showBusy("Loading Game Pass world", "Working…", {
+              hint: "Quit Palworld + Xbox cloud sync. Packages\\…\\wgs is OK.",
+            });
+            return;
+          }
+          if (/Locate Game Pass|Pick your Game Pass/i.test(msg)) return;
           if ($("busyOverlay")?.classList.contains("hidden")) {
             showBusy("Loading Game Pass world", msg, {
-              hint: "Quit Palworld first. Copy wgs to Desktop — Chrome blocks AppData Packages.",
+              hint: "Quit Palworld + Xbox cloud sync. Packages\\…\\wgs is OK — no Desktop copy.",
             });
           } else {
             setBusyMsg(msg, "Loading Game Pass world");
@@ -5497,7 +5642,12 @@
         if (!j.ok) throw new Error(j.error || "Load failed");
         showBusy("Loading Game Pass world", "Finishing up…", { hint: false });
         await applyLoadedSession(j);
-        if ($("saveBtn")) $("saveBtn").textContent = "Save (write back to Game Pass)";
+        if ($("saveBtn")) {
+          $("saveBtn").textContent =
+            j.xgpLocate || j._browser?.xgpLocate
+              ? "Save Game Pass patch ZIP…"
+              : "Save (write back to Game Pass)";
+        }
       } catch (err) {
         if (err && err.name === "AbortError") {
           setStatus("Game Pass folder pick cancelled.");
@@ -5559,24 +5709,106 @@
       return n + " B";
     }
 
-    async function refreshWorldList() {
-      const root = $("worldList");
-      if (!window.GzoBrowser?.supportsFolderPicker()) {
-        root.innerHTML = `<div class="empty">Use Chrome or Edge on HTTPS to open a world folder.</div>`;
-        return;
+    function updateLandingMode() {
+      const localPanel = $("localBridgePanel");
+      const browserNotice = $("browserOnlyNotice");
+      if (localPanel) localPanel.classList.toggle("hidden", !localBridge);
+      if (browserNotice) browserNotice.classList.toggle("hidden", !!localBridge);
+      if ($("locateFolderBtn")) $("locateFolderBtn").disabled = !localCanPickFolder;
+      if ($("openFolderBtn")) {
+        $("openFolderBtn").textContent = "Open writable folder";
       }
-      root.innerHTML = `<div class="empty">Click <strong>Open world folder</strong> and choose the folder that contains Level.sav.</div>`;
     }
 
+    async function refreshWorldList() {
+      const root = $("worldList");
+      if (!root) return;
+      if (localBridge) {
+        try {
+          const r = await fetch(API + "/api/worlds", { cache: "no-store" });
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error || "Could not list worlds");
+          const worlds = j.worlds || [];
+          if (!worlds.length) {
+            root.innerHTML = `<div class="empty">No worlds found under <code>${j.root || "%LOCALAPPDATA%\\Pal\\Saved\\SaveGames"}</code>. Use <strong>Locate folder…</strong> or paste a path.</div>`;
+            return;
+          }
+          root.innerHTML = worlds
+            .map((w) => {
+              const when = w.modified ? new Date(w.modified).toLocaleString() : "";
+              const p = encodeURIComponent(w.levelSav || w.folder);
+              return `<button type="button" class="world-card" data-path="${p}">
+                <div class="wid">${w.worldId}</div>
+                <div class="wmeta">${w.folder}<br>${formatBytes(w.sizeBytes || 0)}${when ? " · " + when : ""}</div>
+              </button>`;
+            })
+            .join("");
+          root.querySelectorAll(".world-card").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const p = decodeURIComponent(btn.getAttribute("data-path") || "");
+              if ($("savePathInput")) $("savePathInput").value = p;
+              loadFromLocalPath(p);
+            });
+          });
+        } catch (err) {
+          root.innerHTML = `<div class="empty">${String(err.message || err)}</div>`;
+        }
+        return;
+      }
+      root.innerHTML = `<div class="empty">Click <strong>Locate save folder</strong> and choose the world folder with Level.sav — AppData is fine. On Save, overwrite that same Level.sav.</div>`;
+    }
+
+    async function detectLocalBridge() {
+      try {
+        const r = await fetch(API + "/api/health", { cache: "no-store" });
+        if (!r.ok) throw new Error("bad status");
+        const j = await r.json();
+        localBridge = !!(j && j.ok);
+        localCanPickFolder = !!(j && j.pickFolder);
+      } catch (_) {
+        localBridge = false;
+        localCanPickFolder = false;
+      }
+      updateLandingMode();
+      await refreshWorldList();
+      if (localBridge) {
+        setStatus("Local bridge ready — Locate folder or click a world below.", "ok");
+      } else if (!window.GzoBrowser) {
+        setStatus("gzo-data.js failed to load.", "bad");
+      } else {
+        setStatus("Ready — Locate save folder (AppData OK).");
+      }
+    }
+
+    if ($("locateSaveFolderBtn")) {
+      $("locateSaveFolderBtn").addEventListener("click", () => loadFromLocateFolder());
+    }
     $("openFolderBtn").addEventListener("click", () => loadFromFolderPicker());
     if ($("openGamePassBtn")) {
       $("openGamePassBtn").addEventListener("click", () => loadFromGamePassPicker());
     }
     $("openFilesBtn").addEventListener("click", () => loadFromFilePicker());
+    if ($("locateFolderBtn")) {
+      $("locateFolderBtn").addEventListener("click", () => locateAndLoadFolder());
+    }
+    if ($("loadPathBtn")) {
+      $("loadPathBtn").addEventListener("click", () => {
+        loadFromLocalPath($("savePathInput")?.value || "");
+      });
+    }
+    if ($("savePathInput")) {
+      $("savePathInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          loadFromLocalPath($("savePathInput").value || "");
+        }
+      });
+    }
 
     $("reselectBtn").addEventListener("click", () => {
       state.sessionId = null;
       state.browserSession = null;
+      state.localSession = false;
       state.pals = [];
       state.destinations = [];
       state.edits.clear();
@@ -5589,7 +5821,7 @@
       $("workspace").classList.add("hidden");
       $("landing").classList.remove("hidden");
       refreshWorldList();
-      setStatus("Pick a world.");
+      setStatus(localBridge ? "Locate a folder or pick a world." : "Pick a world.");
     });
 
     $("saveBtn").addEventListener("click", async () => {
@@ -5606,11 +5838,13 @@
       )
         return;
       if (!(await checkBridge())) return;
-      if (!state.browserSession?._browser) {
-        setStatus("Session missing folder access. Re-open the world folder.", "bad");
-        return;
-      }
-      setStatus("Writing save…");
+
+      const edits = Array.from(state.edits.values());
+      const creates = state.creates.slice();
+      const deletes = Array.from(state.deletes);
+      const playerEdits = Array.from(state.worldPlayerEdits.values());
+      const inventoryEdits = Array.from(state.worldInventoryEdits.values());
+      const techEdits = state.worldTechEdits || undefined;
       const createN = state.creates.length;
       const guildBound = state.creates.some((c) => {
         const d = destinationForId(c.containerId);
@@ -5621,6 +5855,77 @@
         : createN > 0
           ? "Saving pals to Palbox"
           : "Saving";
+
+      // Local Node bridge — write straight back to AppData / picked path
+      if (state.localSession || (localBridge && !state.browserSession?._browser)) {
+        showBusy(saveTitle, "Backing up world folder, then writing…", {
+          hint: "A full copy goes into gzo-backups/<timestamp> before any overwrite.",
+          bar: true,
+          progress: null,
+        });
+        $("saveBtn").disabled = true;
+        try {
+          const r = await fetch(API + "/api/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: state.sessionId,
+              edits,
+              creates,
+              deletes,
+              modded: !!state.moddedPals,
+              playerEdits,
+              inventoryEdits,
+              techEdits,
+            }),
+          });
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error || "Save failed");
+          state.edits.clear();
+          state.creates = [];
+          state.deletes = new Set();
+          state.worldPlayerEdits.clear();
+          state.worldInventoryEdits.clear();
+          state.worldTechEdits = null;
+          if (j.pals) state.pals = j.pals;
+          if (j.destinations) state.destinations = j.destinations;
+          if (j.world) state.world = j.world;
+          ensureGuildDestination();
+          state.selectedPendingIndex = null;
+          renderCreateStaged();
+          if (j.pals) {
+            state.selectedIndex = null;
+            if (state.editorMode === "pals") setRightMode("edit");
+            revealPalsAfterSave(creates, j.newPals);
+            fillCreateDestSelect();
+          }
+          renderStats();
+          renderList();
+          if (state.editorMode === "world") renderWorldUi();
+          else renderWorldStagedSummary();
+          syncPendingSave();
+          const bits = [];
+          if (j.wrotePath) bits.push("Level.sav");
+          if (j.wroteGlobalPath) bits.push("Guild/DPS");
+          if (j.techWrote) bits.push("player tech");
+          setStatus(
+            `Saved in place (${bits.join(", ") || "done"}). Backup: ${j.folderBackupPath || "gzo-backups/…"}`,
+            "ok"
+          );
+        } catch (err) {
+          setStatus(String(err.message || err), "bad");
+        } finally {
+          hideBusy();
+          syncPendingSave();
+        }
+        return;
+      }
+
+      if (!state.browserSession?._browser) {
+        setStatus("Session missing folder access. Re-open the world folder.", "bad");
+        return;
+      }
+      setStatus("Writing save…");
       showBusy(saveTitle, "Backing up world folder, then writing…", {
         hint: "A full copy goes into gzo-backups/<timestamp> before any overwrite.",
         bar: true,
@@ -5628,12 +5933,6 @@
       });
       $("saveBtn").disabled = true;
       try {
-        const edits = Array.from(state.edits.values());
-        const creates = state.creates.slice();
-        const deletes = Array.from(state.deletes);
-        const playerEdits = Array.from(state.worldPlayerEdits.values());
-        const inventoryEdits = Array.from(state.worldInventoryEdits.values());
-        const techEdits = state.worldTechEdits || undefined;
         const j = await window.GzoBrowser.saveSession(
           state.browserSession,
           {
@@ -5744,9 +6043,11 @@
         if (j.techWrote) bits.push("tech");
         setStatus(
           j.xgp
-            ? `Saved back into Game Pass containers (${bits.join(", ") || "done"}). Backup: ${j.folderBackupPath || "gzo-xgp-backups/…"}. Copy this wgs folder back into Packages when done.`
+            ? j.xgpLocate || j.downloadOnly
+              ? `Game Pass patch ready (${bits.join(", ") || "done"}): ${j.wrotePath || "gzo-xgp-patch.zip"}. Extract the ZIP into your user_* folder (overwrite), then launch Palworld.`
+              : `Saved back into Game Pass containers (${bits.join(", ") || "done"}). Backup: ${j.folderBackupPath || "gzo-xgp-backups/…"}.`
             : j.downloadOnly
-              ? `Downloaded backup + Level.sav${j.wroteGlobalPath ? ` + ${j.wroteGlobalPath}` : ""} (${bits.join(", ") || "done"}). Put those files back in your world folder (Players/*_dps.sav for Guild).`
+              ? `Wrote ${j.wrotePath || "Level.sav"}${j.wroteGlobalPath ? ` + ${j.wroteGlobalPath}` : ""} (${bits.join(", ") || "done"}). Use the Save dialog to overwrite the file in your save folder (or accept the download).`
               : `Saved (${bits.join(", ") || "done"}).${j.wroteGlobalPath ? ` Guild file: ${j.wroteGlobalPath}.` : ""} Backup: ${j.folderBackupPath || "gzo-backups/…"}.`,
           "ok"
         );
@@ -5880,14 +6181,7 @@
     buildPassiveSlots();
     buildCreatePassiveSlots();
     syncModdedUi();
-    refreshWorldList();
-    if (!window.GzoBrowser) {
-      setStatus("gzo-data.js failed to load.", "bad");
-    } else if (!window.GzoBrowser.supportsFolderPicker()) {
-      setStatus("Use Chrome or Edge (HTTPS) to open a world folder.", "bad");
-    } else {
-      setStatus("Ready — open your world folder to begin.");
-    }
+    detectLocalBridge();
   </script>
 </body>
 </html>
