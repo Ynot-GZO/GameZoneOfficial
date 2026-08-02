@@ -2519,6 +2519,7 @@
 
     function speciesSpecialTag(code) {
       const c = String(code || "").toLowerCase();
+      if (/^(securitydrone|wildlifesanctuarydrone)/.test(c)) return "Heli/Drone";
       if (/^(boss_|predator_|raid_|gym_|summon_|grassboss|dessertboss|forestboss|volcanoboss)/.test(c)) {
         return "Boss";
       }
@@ -2603,6 +2604,23 @@
       if (!raw) return "";
       const want = raw.toLowerCase();
       const ids = window.PAL_IDS || {};
+      const work = state.palWork || window.PAL_WORK || {};
+
+      // Keep Boss_/Predator_/Raid_/Gym_/Summon_ forms. PAL_IDS often aliases
+      // predator_* → base pal, which would destroy the intended CharacterID.
+      if (/^(boss_|predator_|raid_|gym_|summon_)/i.test(want)) {
+        for (const k of Object.keys(work)) {
+          if (k.toLowerCase() === want) return k;
+        }
+        const via = ids[want];
+        if (via && /^(Boss_|Predator_|Raid_|Gym_|Summon_)/i.test(String(via))) return via;
+        if (/^(Boss_|Predator_|Raid_|Gym_|Summon_)/.test(raw)) return raw;
+        return raw
+          .split("_")
+          .map((p) => (p ? p.charAt(0).toUpperCase() + p.slice(1) : ""))
+          .join("_");
+      }
+
       if (ids[want]) return ids[want];
       const stripped = want.replace(/^(boss_|predator_)/, "");
       if (stripped !== want && ids[stripped]) return ids[stripped];
@@ -2615,7 +2633,6 @@
         dispMap.get(wantCompact);
       if (hit) return hit;
 
-      const work = state.palWork || window.PAL_WORK || {};
       let best = "";
       for (const k of Object.keys(work)) {
         if (k.toLowerCase() !== want && k.toLowerCase() !== stripped) continue;
@@ -2642,8 +2659,9 @@
       const work = state.palWork || window.PAL_WORK || {};
       const ids = window.PAL_IDS || {};
       const noWork = new Set((window.PAL_NO_WORK || []).map((k) => String(k).toLowerCase()));
+      // Core-pal filter only. Helicopters / tower / world bosses / NPCs come from PALDEX_SPECIALS.
       const skipRe =
-        /^(arena_|ambassador|police|female_|male_|npc|test|raid_|gym_|bossdefeat|presenter|hunter_|ninja|darktrader|soldier|syndicate|firecult|moonflower|wildlife|forestboss|dessertboss|volcanoboss|believer_|blacksmith|caravan|bountytrader|scientist_|farmer)/i;
+        /^(arena_|ambassador|police|female_|male_|npc|test|raid_|gym_|bossdefeat|presenter|hunter_|ninja|darktrader|soldier\d|syndicate|firecult|moonflower|wildlife|forestboss|dessertboss|volcanoboss|believer_|blacksmith|caravan|bountytrader|scientist_|farmer|guard_|quest_|salesperson|paldealer|paltrader|visitor_|reward_|help\d|emote_|mobu|doctor$|inspector|epicure|weaponsdealer|respawn_|deathpenalty|robbery|randomevent|security|yamishima|yakushima|escort_|predator_|boss_|summon_)/i;
       const skipPartRe = /_quest_|_otomo|_field|_invader|_tower|_prisoner|_oilrig|_hand_|_head|_minioilrig|_camp|_bossrush/i;
 
       function eligible(code) {
@@ -2666,7 +2684,6 @@
         Object.values(ids).map((v) => String(v).toLowerCase())
       );
 
-      // Resolve each work key once (was O(species × work × names) and froze Guild click).
       const workNorms = new Set();
       for (const k of Object.keys(work)) {
         if (!eligible(k)) continue;
@@ -2696,6 +2713,19 @@
       }
       for (const n of workNorms) add(ids[n] || n);
       for (const s of state.speciesCatalog || []) add(s.code);
+
+      // Curated helicopters, tower bosses, world boss NPCs, factions, raids, predators…
+      for (const spec of window.PALDEX_SPECIALS || []) {
+        const cid = String(spec.characterId || spec || "").trim();
+        if (!cid) continue;
+        const n = normCharacterId(cid);
+        if (!n) continue;
+        const prev = byNorm.get(n);
+        // Prefer keeping the explicit special CharacterID (Gym_/Boss_/Predator_/…).
+        if (!prev || speciesCodeScore(cid) <= speciesCodeScore(prev)) {
+          byNorm.set(n, cid);
+        }
+      }
 
       const list = [...byNorm.values()]
         .sort((a, b) => resolveDisplayName(a).localeCompare(resolveDisplayName(b)))
@@ -4332,7 +4362,7 @@
         out.push({
           id: `guild_repeat_${t.key}_${modeKey}`,
           name: `${t.name} ${modeLabel}`,
-          description: `Full species catalog — ${t.name.toLowerCase()} set (${modeLabel.toLowerCase()} caps). Next: pick ×1–×5.`,
+          description: `Full catalog (~541 pals + bosses/NPCs/heli) — ${t.name.toLowerCase()} set (${modeLabel.toLowerCase()} caps). Next: pick ×1–×5.`,
           guildOnly: true,
           askRepeats: true,
           selectPassives: !!t.selectPassives,
