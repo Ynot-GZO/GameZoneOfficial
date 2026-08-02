@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GZO — Castle Crashers Save Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1a120c;
+      --stone: #2a2118;
+      --stone2: #3a2e22;
+      --parch: #f3e2c4;
+      --parch-dim: #c9b18a;
+      --red: #e23b2f;
+      --blue: #2f6fe0;
+      --green: #2f9b4a;
+      --orange: #f0a01a;
+      --gold: #f0c14a;
+      --danger: #e85a4a;
+      --ok: #3cba6a;
+      --line: rgba(243, 226, 196, 0.18);
+      --font: "Nunito", system-ui, sans-serif;
+      --display: "Bangers", cursive;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--parch);
+      background:
+        radial-gradient(ellipse 90% 50% at 12% -10%, rgba(226, 59, 47, 0.22), transparent 50%),
+        radial-gradient(ellipse 80% 45% at 88% 0%, rgba(47, 111, 224, 0.18), transparent 48%),
+        radial-gradient(ellipse 70% 40% at 50% 110%, rgba(240, 160, 26, 0.12), transparent 55%),
+        linear-gradient(180deg, #24180f 0%, var(--ink) 45%, #120d09 100%);
+      min-height: 100vh;
+    }
+    body::before {
+      content: "";
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          -12deg,
+          transparent 0 18px,
+          rgba(255,255,255,0.012) 18px 19px
+        );
+      opacity: 0.7;
+      z-index: 0;
+    }
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 1.1rem 1.15rem 3rem;
+    }
+    .site-back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-bottom: 14px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--parch-dim);
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      background: rgba(42, 33, 24, 0.75);
+      padding: 7px 14px;
+    }
+    .site-back-link:hover { color: var(--parch); border-color: var(--orange); }
+    .hero {
+      display: grid;
+      gap: 0.55rem;
+      margin-bottom: 1.15rem;
+      animation: rise 0.55s ease both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    .banner {
+      display: flex;
+      height: 10px;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.35);
+    }
+    .banner span { flex: 1; }
+    .banner span:nth-child(1) { background: var(--green); }
+    .banner span:nth-child(2) { background: var(--red); }
+    .banner span:nth-child(3) { background: var(--blue); }
+    .banner span:nth-child(4) { background: var(--orange); }
+    h1 {
+      margin: 0.35rem 0 0;
+      font-family: var(--display);
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--gold);
+      text-shadow: 3px 3px 0 #000, 0 0 24px rgba(240, 193, 74, 0.25);
+    }
+    .hero p {
+      margin: 0;
+      color: var(--parch-dim);
+      font-size: 1rem;
+      max-width: 54ch;
+      line-height: 1.45;
+    }
+    .panel {
+      background: linear-gradient(180deg, rgba(58, 46, 34, 0.92), rgba(36, 28, 20, 0.94));
+      border: 2px solid rgba(243, 226, 196, 0.22);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+      animation: rise 0.6s ease both;
+    }
+    .panel h2 {
+      margin: 0 0 0.7rem;
+      font-family: var(--display);
+      font-size: 1.45rem;
+      letter-spacing: 0.03em;
+      color: var(--orange);
+      font-weight: 400;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--parch-dim);
+      margin-bottom: 0.28rem;
+    }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      border: 2px solid rgba(243, 226, 196, 0.2);
+      background: rgba(18, 13, 9, 0.72);
+      color: var(--parch);
+      border-radius: 10px;
+      padding: 0.55rem 0.7rem;
+      font: inherit;
+      font-weight: 700;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(240, 160, 26, 0.2);
+    }
+    .hint {
+      margin: 0.35rem 0 0;
+      color: var(--parch-dim);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .path {
+      margin-top: 0.7rem;
+      font-size: 0.78rem;
+      color: var(--parch-dim);
+      background: rgba(0,0,0,0.28);
+      border: 1px dashed rgba(243, 226, 196, 0.2);
+      border-radius: 8px;
+      padding: 0.55rem 0.7rem;
+      word-break: break-all;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.75rem;
+    }
+    .btn {
+      appearance: none;
+      border: 2px solid rgba(243, 226, 196, 0.25);
+      background: var(--stone2);
+      color: var(--parch);
+      border-radius: 10px;
+      padding: 0.55rem 0.9rem;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.15s, background 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--gold); }
+    .btn:active { transform: translateY(1px) scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-primary {
+      background: linear-gradient(180deg, #f2b33a, #d88912);
+      color: #1a120c;
+      border-color: #f6d07a;
+    }
+    .btn-red { border-color: rgba(226,59,47,0.55); background: rgba(226,59,47,0.18); }
+    .btn-blue { border-color: rgba(47,111,224,0.55); background: rgba(47,111,224,0.18); }
+    .btn-green { border-color: rgba(47,155,74,0.55); background: rgba(47,155,74,0.18); }
+    .btn-orange { border-color: rgba(240,160,26,0.55); background: rgba(240,160,26,0.18); }
+    .btn-god {
+      background: linear-gradient(90deg, rgba(47,155,74,0.35), rgba(226,59,47,0.35), rgba(47,111,224,0.35), rgba(240,160,26,0.45));
+      border-color: var(--gold);
+      color: #fff;
+      text-shadow: 0 1px 2px #000;
+    }
+    .drop {
+      border: 2px dashed rgba(243, 226, 196, 0.28);
+      border-radius: 12px;
+      padding: 1.35rem 1rem;
+      text-align: center;
+      background: rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop:hover, .drop.drag {
+      border-color: var(--orange);
+      background: rgba(240, 160, 26, 0.08);
+    }
+    .drop strong {
+      display: block;
+      font-family: var(--display);
+      font-size: 1.35rem;
+      letter-spacing: 0.03em;
+      color: var(--gold);
+      margin-bottom: 0.25rem;
+    }
+    .drop input { display: none; }
+    .status {
+      margin: 0.65rem 0 0;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--parch-dim);
+    }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--danger); }
+    .quick {
+      display: none;
+    }
+    .quick.on { display: block; }
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.45rem;
+    }
+    .quick .btn { width: 100%; justify-content: center; }
+    .layout {
+      display: none;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+      gap: 1rem;
+    }
+    .layout.on { display: grid; }
+    @media (max-width: 860px) {
+      .layout.on { grid-template-columns: 1fr; }
+    }
+    .char-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+      gap: 0.55rem;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 0.2rem;
+    }
+    .char-tile {
+      border: 2px solid rgba(243, 226, 196, 0.22);
+      background: rgba(18, 13, 9, 0.72);
+      border-radius: 12px;
+      padding: 0.7rem 0.65rem 0.65rem;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 0.12s ease, border-color 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .char-tile:hover { transform: translateY(-2px); border-color: var(--gold); }
+    .char-tile.active {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 2px rgba(240,160,26,0.25);
+      background: rgba(240,160,26,0.12);
+    }
+    .char-tile.locked {
+      opacity: 1;
+      background: rgba(18, 13, 9, 0.45);
+      border-style: dashed;
+    }
+    .char-tile.locked .name { color: var(--parch-dim); }
+    .char-tile .swatch {
+      width: 100%;
+      height: 8px;
+      border-radius: 99px;
+      margin-bottom: 0.55rem;
+    }
+    .char-tile .name {
+      font-size: 0.98rem;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #fff6e8;
+      letter-spacing: 0.01em;
+      word-break: break-word;
+      hyphens: auto;
+      padding-right: 1.1rem;
+    }
+    .char-tile .meta {
+      margin-top: 0.35rem;
+      font-size: 0.82rem;
+      color: var(--gold);
+      font-weight: 800;
+    }
+    .char-tile .lock {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    .editor-empty {
+      color: var(--parch-dim);
+      font-weight: 700;
+      padding: 1.5rem 0.5rem;
+      text-align: center;
+    }
+    .field-block { margin-bottom: 0.85rem; }
+    .checks {
+      display: grid;
+      gap: 0.35rem;
+    }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .check input { width: 16px; height: 16px; accent-color: var(--orange); }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.55rem;
+    }
+    .footer-note {
+      margin-top: 1.2rem;
+      color: var(--parch-dim);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="site-back-link" href="index.html">← Back to GZO hub</a>
+
+    <header class="hero">
+      <div class="banner" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <h1>Castle Crashers</h1>
+      <p>Steam save editor for <code>cc_save.dat</code> — unlock squads, max levels, and one-click OP kits. Needs your Steam ID64 to decrypt.</p>
+    </header>
+
+    <section class="panel">
+      <h2>Load save</h2>
+      <div class="row">
+        <div>
+          <label for="steamId">Steam ID64</label>
+          <input id="steamId" type="text" inputmode="numeric" placeholder="7656119…" autocomplete="off" />
+          <p class="hint">From your Steam profile URL. Or paste the userdata folder number below and convert.</p>
+          <div class="actions" style="margin-top:0.45rem">
+            <input id="steamFolder" type="text" inputmode="numeric" placeholder="userdata folder id (e.g. 257458980)" style="flex:1;min-width:180px" />
+            <button class="btn" type="button" id="btnConvertId">Convert to ID64</button>
+          </div>
+        </div>
+      </div>
+      <div class="drop" id="drop">
+        <strong>Drop cc_save.dat here</strong>
+        <div class="hint">or click to browse</div>
+        <input id="file" type="file" accept=".dat,application/octet-stream" />
+      </div>
+      <div class="path">Steam\userdata\&lt;id&gt;\204360\remote\cc_save.dat</div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnDownload" disabled>Download encrypted save</button>
+        <button class="btn" id="btnClear" disabled>Clear</button>
+      </div>
+      <p class="status" id="status">Enter Steam ID64, then load your save.</p>
+    </section>
+
+    <section class="panel quick" id="quickPanel">
+      <h2>Quick strikes</h2>
+      <p class="hint" style="margin-bottom:0.75rem">
+        Remaster keeps <strong>level 99</strong> max (255 gets clamped down).
+        Stats above <strong>25</strong> often reset to 1 on load — use Max stats (25) so they stick.
+        The 4th stat is <strong>Agility</strong> (no separate stamina).
+      </p>
+      <div class="quick-grid">
+        <button class="btn btn-green" id="qUnlockChars">Unlock all characters</button>
+        <button class="btn btn-blue" id="qUnlockWeapons">Unlock all weapons</button>
+        <button class="btn btn-orange" id="qUnlockPets">Unlock all pets / animals</button>
+        <button class="btn btn-red" id="qUnlockItems">Unlock items + arenas</button>
+        <button class="btn btn-green" id="qMaxLevels">All characters Lv 99 + XP</button>
+        <button class="btn btn-blue" id="qMaxStats">All stats max (25)</button>
+        <button class="btn btn-orange" id="qConsumables">Max all consumables + relics</button>
+        <button class="btn btn-red" id="qStory">Full story + insane</button>
+        <button class="btn btn-god" id="qEverything">EVERYTHING — max kit (99 / 25)</button>
+        <button class="btn btn-red" id="qOpNuclear" title="Remaster often resets these to 1 on load">Try OP stats 255 (may reset)</button>
+      </div>
+    </section>
+
+    <div class="layout" id="mainLayout">
+      <section class="panel">
+        <h2>Characters</h2>
+        <div class="char-grid" id="charGrid"></div>
+      </section>
+      <section class="panel" id="editorPanel">
+        <h2>Edit</h2>
+        <div class="editor-empty" id="editorEmpty">Pick a character.</div>
+        <div id="editorFields" hidden></div>
+      </section>
+    </div>
+
+    <p class="footer-note">
+      Tip: turn Steam Cloud off (or replace the file then launch) so Cloud doesn’t overwrite your edit.
+      After replacing <code>cc_save.dat</code>, boot the game and load into a map once so it sticks.
+      Level / OP values above normal caps match classic hex / CE god builds.
+    </p>
+  </div>
+
+  <script src="castle-crashers-blowfish.js"></script>
+  <script>
+    const CHARACTER_NAMES = [
+      "Green Knight","Red Knight","Blue Knight","Orange Knight","Gray Knight",
+      "Barbarian","Thief","Fencer","Beekeeper","Industrialist","Alien Hominid",
+      "The King","The Brute","Snakey","Saracen","Royal Guard","Stoveface",
+      "Peasant","Bear","Necromancer","Conehead","Civilian","Open-face Gray Knight",
+      "Fire Demon","Skeleton","Iceskimo","Ninja","Cultist","Pink Knight",
+      "Blacksmith","Hatty","Paint Junior",
+      "Custom 1","Custom 2","Custom 3","Custom 4","Custom 5",
+      "Custom 6","Custom 7","Custom 8","Custom 9","Custom 10"
+    ];
+    const KNIGHT_COLORS = ["#2f9b4a","#e23b2f","#2f6fe0","#f0a01a"];
+    const WEAPONS = [
+      "Skinny Sword","Skinny Sword","Skinny Sword","Thin Sword","Thick Sword",
+      "Pumpkin Peeler","Gladiator Sword","Butcher Knife","Half Sword","Carrot",
+      "Thief Sword","Gold Sword","Dual Prong Sword","Zigzag","Playdo Pasta Maker",
+      "Falchion","Pointy Sword","Chewed Up Sword","Fencer's Foil","Barbarian Axe",
+      "Pitchfork","Curved Sword","Key Sword","Apple Peeler","Rubber Handle Sword",
+      "Mace","Club","Ugly Mace","Refined Mace","Fish","Wrapped Sword",
+      "Skeletor Mace","Clunky Mace","Snakey Mace","Rat Beating Bat",
+      "Black Morning Star","King's Mace","Meat Tenderizer","Leaf","Sheathed Sword",
+      "Practice Foil","Twig","Leafy Twig","Light Saber","Staff","Wooden Spoon",
+      "Bone Leg","Alien Gun","Fishing Spear","Lance","Sai","Unicorn Horn",
+      "Ribeye","Kielbasa","Lobster","Umbrella","Broad Ax","Evil Sword",
+      "Ice Sword","Candlestick","Panic Mallet","Fishing Rod","Wrench",
+      "NG Lollipop","Gold Skull Mace","NG Gold Sword","Chainsaw","Broad Spear",
+      "Glowstick","Chicken Stick","Demon Sword","Broccoli Sword","Man Catcher",
+      "Wooden Mace","Ninja Claw","Buffalo Mace","Electric Eel","Scissors",
+      "Dinner Fork","Cattle Prod","Lightning Bolt","2x4","Wooden Sword",
+      "Cardboard Tube","Emerald Sword","Hammer","Pencil"
+    ];
+    const PETS = [
+      "None","Cardinal","Owlet","Rammy","Frogglet","Monkeyface","BiPolar Bear",
+      "Bitey Bat","Yeti","Troll","Snailburt","Giraffey","Zebra","Meowburt",
+      "Pazzo","Burly Bear","Hawkster","Snoot","Piggy","Spiny","Scratchpaw",
+      "Seahorse","Chicken","Install Ball","Mr. Buddy","Sherbert","Pelter",
+      "Dragonhead","Beholder","Golden Whale"
+    ];
+    const OFF = {
+      UNLOCK: 0, LEVEL: 1, XP: 2, WEAPON: 6, PET: 7,
+      STR: 8, DEF: 9, MAG: 10, AGI: 11, NORMAL_LVL: 12,
+      POTIONS: 15, BOMBS: 16, SANDWICHES: 17, NON_CONSUMABLE: 18,
+      GOLD: 19, INSANE_UNLOCKED: 23, INSANE_LVL: 24, SKULL: 27
+    };
+    const GLOBAL_SIZE = 64;
+    const CHAR_SIZE = 48;
+
+    let blowfish = null;
+    let saveData = null;
+    let selectedChar = -1;
+
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+
+    function setStatus(msg, type) {
+      statusEl.textContent = msg;
+      statusEl.className = "status" + (type ? " " + type : "");
+    }
+
+    function buildKey(steamId64Str) {
+      const sid = BigInt(steamId64Str);
+      const lo = Number(sid & 0xFFFFFFFFn);
+      const hi = Number((sid >> 32n) & 0xFFFFFFFFn);
+      const key = new Uint8Array(24);
+      const kv = new DataView(key.buffer);
+      kv.setUint32(0, 0xb9128343, true);
+      kv.setUint32(4, 0x7e636609, true);
+      kv.setUint32(8, 0x127aac36, true);
+      kv.setUint32(12, 0x563e6167, true);
+      const q = BigInt("0x019fd45372723839");
+      kv.setUint32(16, Number(q & 0xFFFFFFFFn), true);
+      kv.setUint32(20, Number((q >> 32n) & 0xFFFFFFFFn), true);
+      kv.setUint16(0, (hi >>> 16) & 0xFFFF, true);
+      kv.setUint16(5, (lo >>> 16) & 0xFFFF, true);
+      kv.setUint16(15, lo & 0xFFFF, true);
+      kv.setUint16(19, hi & 0xFFFF, true);
+      return key;
+    }
+
+    function numChars() {
+      if (!saveData) return 0;
+      return Math.floor((saveData.length - GLOBAL_SIZE) / CHAR_SIZE);
+    }
+    function charOffset(i) { return GLOBAL_SIZE + i * CHAR_SIZE; }
+    function readU8(off) { return saveData[off]; }
+    function writeU8(off, v) { saveData[off] = v & 0xFF; }
+    function readI32BE(off) {
+      const u = (saveData[off] << 24 | saveData[off+1] << 16 | saveData[off+2] << 8 | saveData[off+3]) >>> 0;
+      return u > 0x7FFFFFFF ? u - 0x100000000 : u;
+    }
+    function writeI32BE(off, v) {
+      if (v < 0) v += 0x100000000;
+      saveData[off] = (v >>> 24) & 0xFF;
+      saveData[off+1] = (v >>> 16) & 0xFF;
+      saveData[off+2] = (v >>> 8) & 0xFF;
+      saveData[off+3] = v & 0xFF;
+    }
+    function writeBits3Bytes(off, total) {
+      for (let i = 0; i < 3; i++) {
+        if (total >= 8) { saveData[off + i] = 0xFF; total -= 8; }
+        else if (total > 0) { saveData[off + i] = (1 << total) - 1; total = 0; }
+        else saveData[off + i] = 0;
+      }
+    }
+    function countBits3Bytes(off) {
+      let count = 0;
+      for (let i = 0; i < 3; i++) {
+        let b = saveData[off + i];
+        while (b) { count += b & 1; b >>= 1; }
+      }
+      return count;
+    }
+
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+    function loadEncrypted(buf) {
+      const steamId = $("steamId").value.trim();
+      if (!/^\d{17}$/.test(steamId)) {
+        throw new Error("Steam ID64 must be 17 digits");
+      }
+      if (buf.byteLength % 8 !== 0) {
+        throw new Error("Save length must be a multiple of 8 (got " + buf.byteLength + ")");
+      }
+      const key = buildKey(steamId);
+      blowfish = new BlowfishJS(key);
+      const raw = new Uint8Array(buf);
+      saveData = blowfish.decrypt(raw);
+      const cs = blowfish.ccChecksum(saveData, saveData.length - 4);
+      const stored = saveData[saveData.length - 4] | (saveData[saveData.length - 3] << 8) |
+        (saveData[saveData.length - 2] << 16) | (saveData[saveData.length - 1] << 24);
+      const ok = (cs >>> 0) === (stored >>> 0);
+      localStorage.setItem("ccSteamId64", steamId);
+      $("btnDownload").disabled = false;
+      $("btnClear").disabled = false;
+      $("quickPanel").classList.add("on");
+      $("mainLayout").classList.add("on");
+      selectedChar = numChars() > 0 ? 0 : -1;
+      renderCharGrid();
+      renderEditor();
+      setStatus(
+        "Decrypted " + raw.length + " bytes · " + numChars() + " characters" +
+        (ok ? " · checksum OK" : " · checksum mismatch (ID may be wrong)"),
+        ok ? "ok" : "err"
+      );
+      if (!ok) {
+        // still allow editing, but warn hard
+      }
+    }
+
+    function downloadSave() {
+      if (!saveData || !blowfish) return;
+      const checksumValue = blowfish.ccChecksum(saveData, saveData.length - 4);
+      const dv = new DataView(saveData.buffer, saveData.byteOffset);
+      dv.setUint32(saveData.length - 4, checksumValue, true);
+      const encrypted = blowfish.encrypt(saveData);
+      const blob = new Blob([encrypted], { type: "application/octet-stream" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "cc_save.dat";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus("Downloaded encrypted cc_save.dat — replace the Steam remote copy", "ok");
+    }
+
+    function clearAll() {
+      saveData = null;
+      blowfish = null;
+      selectedChar = -1;
+      $("btnDownload").disabled = true;
+      $("btnClear").disabled = true;
+      $("quickPanel").classList.remove("on");
+      $("mainLayout").classList.remove("on");
+      $("charGrid").innerHTML = "";
+      setStatus("Cleared. Load another save when ready.");
+    }
+
+    function tileColor(i) {
+      if (i < 4) return KNIGHT_COLORS[i];
+      return KNIGHT_COLORS[i % 4];
+    }
+
+    function renderCharGrid() {
+      const grid = $("charGrid");
+      grid.innerHTML = "";
+      const n = numChars();
+      for (let i = 0; i < n; i++) {
+        const off = charOffset(i);
+        const unlocked = readU8(off + OFF.UNLOCK) === 0x80;
+        const level = readU8(off + OFF.LEVEL) + 1;
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "char-tile" + (unlocked ? "" : " locked") + (i === selectedChar ? " active" : "");
+        const name = CHARACTER_NAMES[i] || ("Char " + (i + 1));
+        tile.title = name + " · Lv " + level + (unlocked ? "" : " · locked");
+        tile.innerHTML =
+          '<div class="swatch" style="background:' + tileColor(i) + '"></div>' +
+          '<div class="name">' + name + "</div>" +
+          '<div class="meta">Lv ' + level + (unlocked ? "" : " · locked") + "</div>" +
+          (unlocked ? "" : '<div class="lock" aria-hidden="true">🔒</div>');
+        tile.addEventListener("click", () => {
+          selectedChar = i;
+          renderCharGrid();
+          renderEditor();
+        });
+        grid.appendChild(tile);
+      }
+    }
+
+    function optionList(arr, selected) {
+      return arr.map((name, i) =>
+        '<option value="' + i + '"' + (i === selected ? " selected" : "") + ">" +
+        i + " — " + name + "</option>"
+      ).join("");
+    }
+
+    function renderEditor() {
+      const empty = $("editorEmpty");
+      const fields = $("editorFields");
+      if (!saveData || selectedChar < 0 || selectedChar >= numChars()) {
+        empty.hidden = false;
+        fields.hidden = true;
+        return;
+      }
+      empty.hidden = true;
+      fields.hidden = false;
+      const i = selectedChar;
+      const off = charOffset(i);
+      const unlocked = readU8(off + OFF.UNLOCK) === 0x80;
+      const level = readU8(off + OFF.LEVEL) + 1;
+      const xp = readI32BE(off + OFF.XP);
+      const gold = readI32BE(off + OFF.GOLD);
+      const str = readU8(off + OFF.STR);
+      const def = readU8(off + OFF.DEF);
+      const mag = readU8(off + OFF.MAG);
+      const agi = readU8(off + OFF.AGI);
+      const weapon = readU8(off + OFF.WEAPON);
+      const pet = readU8(off + OFF.PET);
+      const normalLvl = countBits3Bytes(off + OFF.NORMAL_LVL);
+      const insaneUnlocked = readU8(off + OFF.INSANE_UNLOCKED) !== 0;
+      const insaneLvl = countBits3Bytes(off + OFF.INSANE_LVL);
+      const skull = readU8(off + OFF.SKULL);
+      const potions = readU8(off + OFF.POTIONS);
+      const bombs = readU8(off + OFF.BOMBS);
+      const sandwiches = readU8(off + OFF.SANDWICHES);
+      const nc = readU8(off + OFF.NON_CONSUMABLE);
+
+      fields.innerHTML =
+        '<div class="field-block"><strong style="font-family:var(--display);font-size:1.35rem;color:var(--gold);letter-spacing:0.03em">' +
+        (CHARACTER_NAMES[i] || ("Character " + (i + 1))) + "</strong></div>" +
+        '<div class="checks field-block">' +
+          '<label class="check"><input type="checkbox" id="fUnlock"' + (unlocked ? " checked" : "") + "> Unlocked</label>" +
+          '<label class="check"><input type="checkbox" id="fInsane"' + (insaneUnlocked ? " checked" : "") + "> Insane mode</label>" +
+        "</div>" +
+        '<div class="row">' +
+          '<div><label>Level (game max 99)</label><input type="number" id="fLevel" min="1" max="255" value="' + level + '"></div>' +
+          '<div><label>XP</label><input type="number" id="fXp" value="' + xp + '"></div>' +
+          '<div><label>Gold</label><input type="number" id="fGold" value="' + gold + '"></div>' +
+        "</div>" +
+        '<div class="stat-grid field-block">' +
+          '<div><label>Strength (max 25 sticks)</label><input type="number" id="fStr" min="0" max="255" value="' + str + '"></div>' +
+          '<div><label>Defense (max 25 sticks)</label><input type="number" id="fDef" min="0" max="255" value="' + def + '"></div>' +
+          '<div><label>Magic (max 25 sticks)</label><input type="number" id="fMag" min="0" max="255" value="' + mag + '"></div>' +
+          '<div><label>Agility (max 25 sticks)</label><input type="number" id="fAgi" min="0" max="255" value="' + agi + '"></div>' +
+        "</div>" +
+        '<div class="row">' +
+          '<div><label>Weapon</label><select id="fWeapon">' + optionList(WEAPONS, weapon) + "</select></div>" +
+          '<div><label>Pet</label><select id="fPet">' + optionList(PETS, Math.min(pet, PETS.length - 1)) + "</select></div>" +
+        "</div>" +
+        '<div class="row">' +
+          '<div><label>Normal checkpoints (0–24)</label><input type="number" id="fNormal" min="0" max="24" value="' + normalLvl + '"></div>' +
+          '<div><label>Insane checkpoints (0–24)</label><input type="number" id="fInsaneLvl" min="0" max="24" value="' + insaneLvl + '"></div>' +
+        "</div>" +
+        '<div class="row">' +
+          '<div><label>Potions</label><input type="number" id="fPot" min="0" max="255" value="' + potions + '"></div>' +
+          '<div><label>Bombs</label><input type="number" id="fBomb" min="0" max="255" value="' + bombs + '"></div>' +
+          '<div><label>Sandwiches</label><input type="number" id="fSand" min="0" max="255" value="' + sandwiches + '"></div>' +
+        "</div>" +
+        '<div class="actions" style="margin:0.2rem 0 0.75rem">' +
+          '<button class="btn btn-orange" type="button" id="btnMaxConsumablesThis">Max consumables + relics on this character</button>' +
+        "</div>" +
+        '<div class="row">' +
+          '<div><label>Skull</label><select id="fSkull">' +
+            '<option value="0"' + (skull === 0 ? " selected" : "") + ">None</option>" +
+            '<option value="1"' + (skull === 1 ? " selected" : "") + ">White</option>" +
+            '<option value="255"' + (skull === 255 ? " selected" : "") + ">Gold</option>" +
+          "</select></div>" +
+          '<div><label>Relics bitfield</label><input type="number" id="fNc" min="0" max="255" value="' + nc + '"></div>' +
+        "</div>" +
+        '<div class="actions">' +
+          '<button class="btn btn-primary" id="btnApplyChar">Apply to character</button>' +
+          '<button class="btn btn-god" id="btnOpThis">Max this character (99 / 25)</button>' +
+        "</div>";
+
+      $("btnApplyChar").onclick = applyCurrentChar;
+      $("btnMaxConsumablesThis").onclick = () => {
+        maxConsumablesOnChar(selectedChar);
+        renderEditor();
+        setStatus("Maxed consumables + relics on " + CHARACTER_NAMES[selectedChar], "ok");
+      };
+      $("btnOpThis").onclick = () => {
+        opCharacter(i, { level: 99, stat: 25, gold: 999999, xp: 1000000 });
+        renderCharGrid(); renderEditor();
+        setStatus("Maxed " + CHARACTER_NAMES[i] + " to Lv 99 / stats 25", "ok");
+      };
+    }
+
+    function applyCurrentChar() {
+      if (selectedChar < 0) return;
+      const off = charOffset(selectedChar);
+      writeU8(off + OFF.UNLOCK, $("fUnlock").checked ? 0x80 : 0x00);
+      writeU8(off + OFF.LEVEL, clamp(parseInt($("fLevel").value, 10) || 1, 1, 255) - 1);
+      writeI32BE(off + OFF.XP, parseInt($("fXp").value, 10) || 0);
+      writeI32BE(off + OFF.GOLD, parseInt($("fGold").value, 10) || 0);
+      writeU8(off + OFF.STR, clamp(parseInt($("fStr").value, 10) || 0, 0, 255));
+      writeU8(off + OFF.DEF, clamp(parseInt($("fDef").value, 10) || 0, 0, 255));
+      writeU8(off + OFF.MAG, clamp(parseInt($("fMag").value, 10) || 0, 0, 255));
+      writeU8(off + OFF.AGI, clamp(parseInt($("fAgi").value, 10) || 0, 0, 255));
+      writeU8(off + OFF.WEAPON, parseInt($("fWeapon").value, 10) || 0);
+      writeU8(off + OFF.PET, parseInt($("fPet").value, 10) || 0);
+      writeBits3Bytes(off + OFF.NORMAL_LVL, clamp(parseInt($("fNormal").value, 10) || 0, 0, 24));
+      writeU8(off + OFF.INSANE_UNLOCKED, $("fInsane").checked ? 1 : 0);
+      writeBits3Bytes(off + OFF.INSANE_LVL, clamp(parseInt($("fInsaneLvl").value, 10) || 0, 0, 24));
+      writeU8(off + OFF.POTIONS, clamp(parseInt($("fPot").value, 10) || 0, 0, 255));
+      writeU8(off + OFF.BOMBS, clamp(parseInt($("fBomb").value, 10) || 0, 0, 255));
+      writeU8(off + OFF.SANDWICHES, clamp(parseInt($("fSand").value, 10) || 0, 0, 255));
+      writeU8(off + OFF.SKULL, parseInt($("fSkull").value, 10) || 0);
+      writeU8(off + OFF.NON_CONSUMABLE, clamp(parseInt($("fNc").value, 10) || 0, 0, 255));
+      renderCharGrid();
+      setStatus("Updated " + (CHARACTER_NAMES[selectedChar] || "character"), "ok");
+    }
+
+    function maxConsumablesOnChar(i) {
+      const off = charOffset(i);
+      writeU8(off + OFF.POTIONS, 99);
+      writeU8(off + OFF.BOMBS, 99);
+      writeU8(off + OFF.SANDWICHES, 99);
+      writeU8(off + OFF.NON_CONSUMABLE, 0xFF); // compass/wheel/telescope/horn (normal + insane)
+    }
+
+    function opCharacter(i, opts) {
+      opts = opts || {};
+      const off = charOffset(i);
+      const level = opts.level ?? 99;
+      const stat = opts.stat ?? 25;
+      writeU8(off + OFF.UNLOCK, 0x80);
+      writeU8(off + OFF.LEVEL, clamp(level, 1, 255) - 1);
+      writeI32BE(off + OFF.XP, opts.xp ?? 1000000);
+      writeI32BE(off + OFF.GOLD, opts.gold ?? 999999);
+      writeU8(off + OFF.STR, clamp(stat, 0, 255));
+      writeU8(off + OFF.DEF, clamp(stat, 0, 255));
+      writeU8(off + OFF.MAG, clamp(stat, 0, 255));
+      writeU8(off + OFF.AGI, clamp(stat, 0, 255));
+      writeBits3Bytes(off + OFF.NORMAL_LVL, 24);
+      writeU8(off + OFF.INSANE_UNLOCKED, 1);
+      writeBits3Bytes(off + OFF.INSANE_LVL, 24);
+      maxConsumablesOnChar(i);
+      writeU8(off + OFF.SKULL, 255);
+    }
+
+    function summarizeSample() {
+      if (!saveData || numChars() < 1) return "";
+      const off = charOffset(0);
+      return " · sample " + CHARACTER_NAMES[0] +
+        " Lv " + (readU8(off + OFF.LEVEL) + 1) +
+        " stats " + [OFF.STR, OFF.DEF, OFF.MAG, OFF.AGI].map((s) => readU8(off + s)).join("/");
+    }
+
+    function forEachChar(fn) {
+      const n = numChars();
+      for (let i = 0; i < n; i++) fn(i);
+    }
+
+    function unlockAllWeapons() {
+      for (let i = 18; i <= 30; i++) saveData[i] = 0xFF;
+    }
+    function unlockAllPets() {
+      saveData[8] = 0xFE;
+      for (let i = 9; i <= 11; i++) saveData[i] = 0xFF;
+    }
+    function unlockItemsArenas() {
+      saveData[8] = 0xFE;
+      for (let i = 9; i <= 17; i++) saveData[i] = 0xFF;
+      saveData[12] = 0xFF;
+    }
+
+    $("qUnlockChars").onclick = () => {
+      forEachChar((i) => writeU8(charOffset(i) + OFF.UNLOCK, 0x80));
+      renderCharGrid(); renderEditor();
+      setStatus("All characters unlocked" + summarizeSample(), "ok");
+    };
+    $("qUnlockWeapons").onclick = () => { unlockAllWeapons(); setStatus("All weapons unlocked", "ok"); };
+    $("qUnlockPets").onclick = () => { unlockAllPets(); setStatus("All pets / animals unlocked", "ok"); };
+    $("qUnlockItems").onclick = () => { unlockItemsArenas(); setStatus("Items / arenas unlocked", "ok"); };
+    $("qMaxLevels").onclick = () => {
+      forEachChar((i) => {
+        const off = charOffset(i);
+        writeU8(off + OFF.LEVEL, 98); // display 99
+        writeI32BE(off + OFF.XP, 1000000);
+        writeU8(off + OFF.STR, 25); writeU8(off + OFF.DEF, 25);
+        writeU8(off + OFF.MAG, 25); writeU8(off + OFF.AGI, 25);
+      });
+      renderCharGrid(); renderEditor();
+      setStatus("All characters Lv 99 + stats 25" + summarizeSample(), "ok");
+    };
+    $("qMaxStats").onclick = () => {
+      forEachChar((i) => {
+        const off = charOffset(i);
+        writeU8(off + OFF.STR, 25); writeU8(off + OFF.DEF, 25);
+        writeU8(off + OFF.MAG, 25); writeU8(off + OFF.AGI, 25);
+      });
+      renderCharGrid(); renderEditor();
+      setStatus("All stats set to 25" + summarizeSample(), "ok");
+    };
+    $("qOpNuclear").onclick = () => {
+      forEachChar((i) => {
+        const off = charOffset(i);
+        writeU8(off + OFF.STR, 255); writeU8(off + OFF.DEF, 255);
+        writeU8(off + OFF.MAG, 255); writeU8(off + OFF.AGI, 255);
+      });
+      renderCharGrid(); renderEditor();
+      setStatus("Wrote stats 255 — remaster may reset these to 1 on load" + summarizeSample(), "err");
+    };
+    $("qConsumables").onclick = () => {
+      forEachChar((i) => maxConsumablesOnChar(i));
+      renderEditor();
+      setStatus("All characters: potions/bombs/sandwiches 99 + all relics", "ok");
+    };
+    $("qStory").onclick = () => {
+      forEachChar((i) => {
+        const off = charOffset(i);
+        writeBits3Bytes(off + OFF.NORMAL_LVL, 24);
+        writeU8(off + OFF.INSANE_UNLOCKED, 1);
+        writeBits3Bytes(off + OFF.INSANE_LVL, 24);
+        writeU8(off + OFF.NON_CONSUMABLE, 0xFF);
+        writeU8(off + OFF.SKULL, 255);
+      });
+      renderEditor();
+      setStatus("Full story + insane + gold skulls", "ok");
+    };
+    $("qEverything").onclick = () => {
+      unlockAllWeapons();
+      unlockAllPets();
+      unlockItemsArenas();
+      forEachChar((i) => opCharacter(i, { level: 99, stat: 25, gold: 999999, xp: 1000000 }));
+      renderCharGrid(); renderEditor();
+      setStatus("Max kit applied (Lv 99 / stats 25) — download the save" + summarizeSample(), "ok");
+    };
+
+    // file UI
+    const drop = $("drop");
+    const fileInput = $("file");
+    drop.addEventListener("click", () => fileInput.click());
+    drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("drag"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("drag"));
+    drop.addEventListener("drop", (e) => {
+      e.preventDefault();
+      drop.classList.remove("drag");
+      const f = e.dataTransfer.files[0];
+      if (f) readFile(f);
+    });
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files[0];
+      fileInput.value = "";
+      if (f) readFile(f);
+    });
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { loadEncrypted(reader.result); }
+        catch (err) { setStatus(String(err.message || err), "err"); }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    $("btnDownload").onclick = downloadSave;
+    $("btnClear").onclick = clearAll;
+
+    $("btnConvertId").onclick = () => {
+      const folder = ($("steamFolder").value || "").trim();
+      if (!/^\d+$/.test(folder)) {
+        setStatus("Enter the numeric Steam userdata folder id", "err");
+        return;
+      }
+      const id64 = (76561197960265728n + BigInt(folder)).toString();
+      $("steamId").value = id64;
+      localStorage.setItem("ccSteamId64", id64);
+      setStatus("Steam ID64 set to " + id64, "ok");
+    };
+
+    const saved = localStorage.getItem("ccSteamId64");
+    if (saved) $("steamId").value = saved;
+  </script>
+</body>
+</html>
