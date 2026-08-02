@@ -5493,6 +5493,7 @@
           setStatus("Folder locate cancelled.");
           return;
         }
+        console.error("Locate folder failed", err);
         $("landing").classList.remove("hidden");
         $("workspace").classList.add("hidden");
         setStatus(String(err.message || err), "bad");
