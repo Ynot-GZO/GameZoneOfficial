@@ -1350,10 +1350,10 @@
         <div id="paldexStepFill" class="hidden">
           <p id="paldexFillIntro" style="margin:0 0 10px;">Choose how to fill the target box:</p>
           <div class="modal-actions" style="flex-direction:column;align-items:stretch;gap:8px;">
-            <button type="button" class="btn primary" id="paldexFillMissing">Add missing species only</button>
-            <p class="muted" style="margin:0;font-size:.8rem;">Keeps yours. Adds species you do not already own (party, bases, Palbox, Guild).</p>
-            <button type="button" class="btn" id="paldexFillAll">Add full pack (keep yours)</button>
-            <p class="muted" style="margin:0;font-size:.8rem;">Keeps yours. Adds one of every species (duplicates allowed).</p>
+            <button type="button" class="btn primary" id="paldexFillAll">Add full pack (keep yours)</button>
+            <p class="muted" style="margin:0;font-size:.8rem;">Recommended. Keeps yours. Stages one of every species (~541) — duplicates OK. Then click Save.</p>
+            <button type="button" class="btn" id="paldexFillMissing">Add missing species only</button>
+            <p class="muted" style="margin:0;font-size:.8rem;">Keeps yours. Only adds species you do not already own anywhere (party, bases, Palbox, Guild). If you already have a full catalog, this adds <strong>0</strong>.</p>
             <button type="button" class="btn danger" id="paldexFillReplace">Delete target box &amp; replace</button>
             <p class="muted" style="margin:0;font-size:.8rem;">Deletes every pal currently in the chosen box, then stages the pack.</p>
             <button type="button" class="btn" id="paldexFillBack">Back</button>
@@ -4179,13 +4179,18 @@
         return;
       }
       ensurePaldexPassiveNames();
+      state._paldexSpeciesCache = null;
       state.paldexWizard = { fillMode: null, modded: null, targetKind: null };
       $("paldexModalSubtitle").textContent =
         "Pick a target box. Watch capacity — do not exceed free slots.";
       const guildBtn = $("paldexTargetGuild");
       if (guildBtn) {
-        ensureGuildDestination();
-        guildBtn.disabled = !guildDestination();
+        const gpsOk = !!state.guildStorageLoaded;
+        if (gpsOk) ensureGuildDestination();
+        guildBtn.disabled = !gpsOk || !guildDestination();
+        guildBtn.title = gpsOk
+          ? ""
+          : "Guild storage (*_dps.sav / GlobalPalStorage) was not loaded with this world. Open the full world folder (with Players), not Level.sav alone.";
       }
       showPaldexStep("target");
       $("paldexModal").classList.remove("hidden");
@@ -4193,9 +4198,18 @@
     }
 
     function onPaldexTargetPick(targetKind) {
-      if (targetKind === "guild" && !guildDestination()) {
-        setStatus("Guild Box not found in this save.", "bad");
-        return;
+      if (targetKind === "guild") {
+        if (!state.guildStorageLoaded) {
+          setStatus(
+            "Guild / Dimensional storage was not loaded. Open the world folder that includes Players/*_dps.sav (Desktop copy of the full world), then try again.",
+            "bad"
+          );
+          return;
+        }
+        if (!guildDestination()) {
+          setStatus("Guild Box not found in this save.", "bad");
+          return;
+        }
       }
       if (targetKind === "palbox" && !palboxDestination()) {
         setStatus("Palbox not found in this save.", "bad");
@@ -4238,7 +4252,7 @@
       const modded = state.paldexWizard.modded;
       const modeLabel =
         modded == null ? "combo / per-set" : modded ? "Modded" : "Legit";
-      const fillMode = state.paldexWizard.fillMode || "missing";
+      const fillMode = state.paldexWizard.fillMode || "all";
       const boxLabel = paldexTargetLabel();
       const fillLabels = {
         missing: "missing species only (keep yours)",
@@ -4265,18 +4279,17 @@
         warn =
           `<br><br><span style="color:#f6a36c;font-weight:700;">Nothing to add</span> — ` +
           (fillMode === "missing"
-            ? "you already own every catalog species."
-            : "species list is empty.");
+            ? "you already own every catalog species somewhere in this save. Go Back and choose <strong>Add full pack</strong> or <strong>Delete &amp; replace</strong>."
+            : "species list is empty — hard-refresh (Ctrl+F5) and re-upload gzo-data.js if this persists.");
       } else if (over) {
         warn =
           `<br><br><span style="color:#ff8a8a;font-weight:700;">Warning: not enough ${escapeHtml(boxLabel)} space.</span> ` +
-          `A single pack needs about <strong>${addN}</strong> slot(s) but only <strong>${free}</strong> are free ` +
-          `(max <strong>${maxSlots}</strong>). Guild ♂+♀ combo is ~12× one pack.`;
+          `Needs about <strong>${addN}</strong> free slot(s); you have <strong>${free}</strong> ` +
+          `(max <strong>${maxSlots}</strong>).`;
       } else {
         warn =
           `<br><br><span style="color:#f6c56c;font-weight:700;">${escapeHtml(boxLabel)} check:</span> ` +
-          `~<strong>${addN}</strong> for one pack; <strong>${free}</strong> free of <strong>${maxSlots}</strong>. ` +
-          `Guild ♂+♀ combo = 12 sets with 2 empty pages between male and female.`;
+          `~<strong>${addN}</strong> for one full catalog; <strong>${free}</strong> free of <strong>${maxSlots}</strong>.`;
       }
       let head = "";
       if (fillMode === "replace") {
@@ -4290,9 +4303,8 @@
       }
       const capsLine =
         modded == null && paldexTargetKind() === "guild"
-          ? `Next you’ll pick a <strong>guild combo</strong> (full mix, modded-only, legit-only, or × repeats). Caps come from each set.<br><br>`
-          : `New pals use <strong>${modeLabel}</strong> caps. Only real pals are included ` +
-            `(NPCs / raid forms skipped).<br><br>`;
+          ? `Next you’ll pick a <strong>guild combo</strong>. Caps come from each set.<br><br>`
+          : `New pals use <strong>${modeLabel}</strong> caps. Catalog includes regular pals plus helicopters, tower bosses, world bosses, NPCs, raids &amp; predators.<br><br>`;
       $("paldexConfirmText").innerHTML =
         head +
         capsLine +
@@ -4428,7 +4440,7 @@
     function renderPaldexPresetList() {
       const modePicked = state.paldexWizard.modded != null;
       const modded = !!state.paldexWizard.modded;
-      const fillMode = state.paldexWizard.fillMode || "missing";
+      const fillMode = state.paldexWizard.fillMode || "all";
       const targetKind = paldexTargetKind();
       const list = allPaldexPresetsForWizard();
       const root = $("paldexPresetList");
@@ -4582,12 +4594,19 @@
     async function applyPaldexPreset(packId, passives) {
       const pack = getPaldexPackById(packId);
       if (!pack || pack.disabled) return;
-      const fillMode = state.paldexWizard.fillMode || "missing";
+      const fillMode = state.paldexWizard.fillMode || "all";
       const targetKind = paldexTargetKind();
       const boxLabel = paldexTargetLabel();
       const box = paldexTargetDestination();
       if (!box) {
         setStatus(`${boxLabel} not found.`, "bad");
+        return;
+      }
+      if (targetKind === "guild" && !state.guildStorageLoaded) {
+        setStatus(
+          "Guild storage was not loaded with this world — open the full world folder (Players/*_dps.sav), then try again.",
+          "bad"
+        );
         return;
       }
       let modded = !!state.paldexWizard.modded;
@@ -4606,6 +4625,9 @@
       syncModdedUi();
 
       const indices = boxPalIndices(targetKind);
+      // Always rebuild catalog for this run (avoid stale empty cache).
+      state._paldexSpeciesCache = null;
+
       if (fillMode === "replace") {
         for (const idx of indices) {
           state.deletes.add(idx);
@@ -4637,10 +4659,13 @@
           ];
       const setSpecies = sets.map((set) => speciesForPaldexSet(pack, set, fillMode));
       if (!setSpecies.some((list) => list.length)) {
+        if (fillMode === "replace") {
+          for (const idx of indices) state.deletes.delete(idx);
+        }
         setStatus(
           fillMode === "missing"
-            ? "Nothing to add — you already own every species in this pack."
-            : "No species available for this pack.",
+            ? "Nothing to add — you already own every species in this pack. Use Add full pack or Replace instead."
+            : "No species available for this pack. Hard-refresh (Ctrl+F5) and confirm gzo-data.js uploaded.",
           "bad"
         );
         return;
@@ -4771,7 +4796,7 @@
       setStatus(
         `Staged ${stagedCount} ${boxLabel} add(s) (${sets.length} set${
           sets.length === 1 ? "" : "s"
-        } · ${keepNote} · ${setNames}). Save to write.`,
+        } · ${keepNote} · ${setNames}). Click Save Level.sav to write them into the save.`,
         "ok"
       );
     }
@@ -5415,9 +5440,18 @@
       state.sessionId = j.sessionId;
       state.browserSession = j._browser ? j : null;
       state.localSession = !!(j && j.sessionId && !j._browser && localBridge);
+      state.guildStorageLoaded = !!(
+        (j._browser && j._browser.globalGvas) ||
+        j.globalPalStoragePath ||
+        j.globalGvasPath
+      );
       state.pals = j.pals || [];
       state.destinations = j.destinations || [];
-      ensureGuildDestination();
+      if (state.guildStorageLoaded) ensureGuildDestination();
+      else {
+        // Keep a disabled stub out of the way — don't fake a writable guild box.
+        state.destinations = (state.destinations || []).filter((d) => d.kind !== "guild");
+      }
       state.world = j.world || { players: [], bags: [], worldContainers: [], tech: {} };
       state.worldPlayerEdits.clear();
       state.worldInventoryEdits.clear();
