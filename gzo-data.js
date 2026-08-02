@@ -2490,12 +2490,15 @@ json.dumps(out, default=str)
       input.setAttribute("webkitdirectory", "");
       input.setAttribute("directory", "");
       input.multiple = true;
-      input.style.display = "none";
+      // Keep in-document but invisible — some browsers drop change if input is display:none.
+      input.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px;";
       let settled = false;
       const cleanup = () => {
         clearTimeout(failSafe);
-        window.removeEventListener("focus", onFocus);
-        input.remove();
+        input.removeEventListener("change", onChange);
+        input.removeEventListener("cancel", onCancel);
+        // Delay remove so late change events still land on the element.
+        setTimeout(() => input.remove(), 0);
       };
       const abort = () => {
         if (settled) return;
@@ -2511,24 +2514,23 @@ json.dumps(out, default=str)
         cleanup();
         resolve(files);
       };
-      const onFocus = () => {
-        setTimeout(() => {
-          if (!settled && (!input.files || !input.files.length)) abort();
-        }, 800);
-      };
-      const failSafe = setTimeout(() => {
-        if (!settled && (!input.files || !input.files.length)) abort();
-      }, 180000);
-      input.addEventListener("change", () => {
+      const onChange = () => {
         const list = input.files ? Array.from(input.files) : [];
         if (!list.length) {
           abort();
           return;
         }
         finish(list);
-      });
+      };
+      const onCancel = () => abort();
+      // Do NOT abort on window focus — folder picks (esp. AppData) refocus before
+      // Chrome finishes enumerating files, which looked like "select does nothing".
+      const failSafe = setTimeout(() => {
+        if (!settled && (!input.files || !input.files.length)) abort();
+      }, 300000);
+      input.addEventListener("change", onChange);
+      input.addEventListener("cancel", onCancel);
       document.body.appendChild(input);
-      window.addEventListener("focus", onFocus);
       input.click();
     });
   }
@@ -2690,7 +2692,7 @@ json.dumps(out, default=str)
       const msg = String(err && (err.message || err));
       if (/system file|not allowed|permission|abort/i.test(msg) && err.name !== "AbortError") {
         throw new Error(
-          "Chrome blocked that folder (AppData / system paths are not allowed). Use “Locate save folder” instead — it can open AppData. Or copy the world to Desktop and open that copy."
+          "Chrome blocked that folder (AppData / system paths are not allowed). Copy the world folder to your Desktop and open that copy."
         );
       }
       throw err;
@@ -3113,9 +3115,9 @@ json.dumps(out, default=str)
     });
   }
 
-  /** Primary Game Pass open — classic folder dialog works in Packages (no Desktop copy). */
+  /** Primary Game Pass open — Desktop copy of wgs (in-place blob write). */
   async function openGamePassFolder(onProgress, worldPicker) {
-    return openGamePassFolderLocate(onProgress, worldPicker);
+    return openGamePassFolderWritable(onProgress, worldPicker);
   }
 
   /** Optional: writable Desktop copy of wgs (in-place blob write, no ZIP). */
@@ -3136,7 +3138,7 @@ json.dumps(out, default=str)
       const msg = String(err && (err.message || err));
       if (/system file|not allowed|permission|abort/i.test(msg) && err.name !== "AbortError") {
         throw new Error(
-          "Chrome blocked that folder. Use Open Game Pass (Packages OK) instead, or copy wgs to Desktop."
+          "Chrome blocked that folder. Copy SystemAppData\\wgs to your Desktop and open that copy."
         );
       }
       throw err;
@@ -3194,12 +3196,15 @@ json.dumps(out, default=str)
       input.type = "file";
       input.accept = accept || ".sav,application/octet-stream";
       input.multiple = !!multiple;
-      input.style.display = "none";
+      input.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px;";
       let settled = false;
       const cleanup = () => {
         clearTimeout(failSafe);
+        clearTimeout(focusTimer);
         window.removeEventListener("focus", onFocus);
-        input.remove();
+        input.removeEventListener("change", onChange);
+        input.removeEventListener("cancel", onCancel);
+        setTimeout(() => input.remove(), 0);
       };
       const abort = () => {
         if (settled) return;
@@ -3215,23 +3220,28 @@ json.dumps(out, default=str)
         cleanup();
         resolve(files);
       };
+      let focusTimer = null;
       const onFocus = () => {
-        setTimeout(() => {
+        // Single-file dialogs are faster, but still wait — avoid aborting before change.
+        clearTimeout(focusTimer);
+        focusTimer = setTimeout(() => {
           if (!settled && (!input.files || !input.files.length)) abort();
-        }, 600);
+        }, 2500);
       };
-      // If the OS dialog never opens (lost user gesture), don't hang forever
       const failSafe = setTimeout(() => {
         if (!settled && (!input.files || !input.files.length)) abort();
-      }, 120000);
-      input.addEventListener("change", () => {
+      }, 180000);
+      const onChange = () => {
         const list = input.files ? Array.from(input.files) : [];
         if (!list.length) {
           abort();
           return;
         }
         finish(list);
-      });
+      };
+      const onCancel = () => abort();
+      input.addEventListener("change", onChange);
+      input.addEventListener("cancel", onCancel);
       document.body.appendChild(input);
       window.addEventListener("focus", onFocus);
       input.click();
