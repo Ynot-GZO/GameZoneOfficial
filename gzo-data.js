@@ -684,7 +684,9 @@ window.GZO_PYTHON = {
 /* ---- Game Pass WGS helpers ---- */
 /**
  * Xbox Game Pass (WGS) container helpers for the browser pack.
- * Extract Palworld saves from a Desktop copy of wgs, edit, write blobs back.
+ * Supports:
+ *   - Writable folder handle (Desktop copy) → write blobs in place
+ *   - Locate via classic folder dialog (Packages / AppData OK) → patch ZIP
  *
  * Modern Palworld container names look like:
  *   {worldId}-Level-01
@@ -1185,13 +1187,421 @@ window.GZO_PYTHON = {
     );
   }
 
+  function normPath(p) {
+    return String(p || "").replace(/\\/g, "/").replace(/^\/+/, "");
+  }
+
+  /** Build path → File map from a webkitdirectory FileList (Packages / AppData OK). */
+  function buildFileMapFromList(fileList) {
+    const map = new Map();
+    for (const f of Array.from(fileList || [])) {
+      const rel = normPath(f.webkitRelativePath || f.name);
+      if (!rel) continue;
+      map.set(rel, f);
+      map.set(rel.toLowerCase(), f);
+    }
+    return map;
+  }
+
+  function findContainersIndexPath(fileMap) {
+    const keys = [...fileMap.keys()].filter((k) => !k.includes("gzo-") && !/\/t\//i.test(k));
+    const hits = keys.filter((k) => /(^|\/)containers\.index$/i.test(k));
+    if (!hits.length) return null;
+    hits.sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
+    return hits[0];
+  }
+
+  async function readMapFile(fileMap, rel) {
+    const key = normPath(rel);
+    const file =
+      fileMap.get(key) ||
+      fileMap.get(key.toLowerCase()) ||
+      fileMap.get(key.split("/").pop()) ||
+      null;
+    if (!file) return null;
+    return new Uint8Array(await file.arrayBuffer());
+  }
+
+  function listMapChildren(fileMap, dirPrefix) {
+    const prefix = normPath(dirPrefix).replace(/\/?$/, "/");
+    const prefixLower = prefix.toLowerCase();
+    const out = [];
+    const seen = new Set();
+    for (const [key, file] of fileMap.entries()) {
+      // Skip duplicate lowercase keys we also stored in buildFileMapFromList.
+      if (key === key.toLowerCase() && key !== normPath(file.webkitRelativePath || file.name || "")) {
+        const orig = normPath(file.webkitRelativePath || file.name || "");
+        if (orig && orig !== key) continue;
+      }
+      const keyNorm = normPath(key);
+      if (!keyNorm.toLowerCase().startsWith(prefixLower)) continue;
+      const rest = keyNorm.slice(prefix.length);
+      if (!rest || rest.includes("/")) continue;
+      if (seen.has(rest.toLowerCase())) continue;
+      seen.add(rest.toLowerCase());
+      out.push({ name: rest, file });
+    }
+    return out;
+  }
+
+  async function resolveBlobFromMap(fileMap, containerDirRel, wireBytes, offset) {
+    const candidates = [
+      uuidFolderFromWireBytes(wireBytes, offset),
+      uuidHexFromBytesLe(wireBytes, offset),
+      rawHex(wireBytes, offset),
+    ];
+    const found = [];
+    const seen = new Set();
+    for (const cand of candidates) {
+      if (!cand || seen.has(cand)) continue;
+      seen.add(cand);
+      const rel = normPath(`${containerDirRel}/${cand}`);
+      const bytes = await readMapFile(fileMap, rel);
+      if (bytes) found.push({ blobRelPath: rel, blobName: cand, bytes });
+    }
+    if (!found.length) {
+      for (const child of listMapChildren(fileMap, containerDirRel)) {
+        if (/^container\./i.test(child.name)) continue;
+        const rel = normPath(`${containerDirRel}/${child.name}`);
+        const bytes = await readMapFile(fileMap, rel);
+        if (bytes) found.push({ blobRelPath: rel, blobName: child.name, bytes });
+      }
+    }
+    if (!found.length) return null;
+    if (found.length === 1) return found[0];
+    for (const f of found) {
+      if (f.bytes.length >= 12) {
+        const mag = String.fromCharCode(f.bytes[8], f.bytes[9], f.bytes[10]);
+        if (mag === "CNK" || mag === "PlZ" || mag === "PlM") return f;
+      }
+    }
+    return found.sort((a, b) => b.bytes.length - a.bytes.length)[0];
+  }
+
+  async function resolveContainerFileFromMap(fileMap, containerDirRel, containerNum) {
+    const preferred = normPath(`${containerDirRel}/container.${containerNum}`);
+    if (await readMapFile(fileMap, preferred)) return preferred;
+    for (const child of listMapChildren(fileMap, containerDirRel)) {
+      if (/^container\.\d+$/i.test(child.name)) {
+        return normPath(`${containerDirRel}/${child.name}`);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Parse WGS from a classic folder FileList (no directory handles).
+   * Entries carry blobRelPath / indexRelPath for zip write-back.
+   */
+  async function parseWgsUserDirFromFiles(fileMap, indexRelPath) {
+    const indexPath = normPath(indexRelPath || findContainersIndexPath(fileMap));
+    if (!indexPath) {
+      throw new Error(
+        "No containers.index found. Open the wgs folder (or the user_* folder inside it)."
+      );
+    }
+    const indexDir = indexPath.includes("/")
+      ? indexPath.slice(0, indexPath.lastIndexOf("/") + 1)
+      : "";
+    const indexBytes = await readMapFile(fileMap, indexPath);
+    if (!indexBytes) throw new Error("Could not read containers.index");
+
+    const view = new DataView(indexBytes.buffer, indexBytes.byteOffset, indexBytes.byteLength);
+    let o = 0;
+    let r = readU32(view, o);
+    o = r.o;
+    const version = r.v;
+    r = readU32(view, o);
+    o = r.o;
+    const containerCount = r.v;
+    r = readU32(view, o);
+    o = r.o;
+    const flag1 = r.v;
+    r = readUtf16(view, o);
+    o = r.o;
+    const packageName = r.v;
+    o += 8;
+    r = readU32(view, o);
+    o = r.o;
+    r = readUtf16(view, o);
+    o = r.o;
+    o += 8;
+    void flag1;
+
+    const entries = [];
+    const diagnostics = {
+      version,
+      containerCount,
+      packageName,
+      skippedMissingDir: 0,
+      skippedMissingContainer: 0,
+      skippedMissingBlob: 0,
+      sampleNames: [],
+      locateMode: true,
+      indexRelPath: indexPath,
+    };
+
+    for (let i = 0; i < containerCount; i++) {
+      const nameAt = o;
+      r = readUtf16(view, o);
+      o = r.o;
+      const containerName = r.v;
+      r = readUtf16(view, o);
+      o = r.o;
+      r = readUtf16(view, o);
+      o = r.o;
+      r = readU8(view, o);
+      o = r.o;
+      const containerNum = r.v;
+      o += 4;
+      const guidOffset = o;
+      const containerGuidHex = uuidFolderFromWireBytes(indexBytes, guidOffset);
+      o += 16;
+      o += 8;
+      const sizeAOffset = o;
+      const sizeBOffset = o + 8;
+      o += 16;
+
+      if (diagnostics.sampleNames.length < 12) {
+        diagnostics.sampleNames.push(containerName);
+      }
+
+      let containerDirRel = null;
+      for (const cand of [
+        containerGuidHex,
+        uuidHexFromBytesLe(indexBytes, guidOffset),
+        rawHex(indexBytes, guidOffset),
+      ]) {
+        const tryDir = normPath(`${indexDir}${cand}`);
+        if (listMapChildren(fileMap, tryDir).length || (await readMapFile(fileMap, `${tryDir}/container.${containerNum}`))) {
+          containerDirRel = tryDir;
+          break;
+        }
+      }
+      if (!containerDirRel) {
+        diagnostics.skippedMissingDir += 1;
+        continue;
+      }
+
+      const containerFileRel = await resolveContainerFileFromMap(
+        fileMap,
+        containerDirRel,
+        containerNum
+      );
+      if (!containerFileRel) {
+        diagnostics.skippedMissingContainer += 1;
+        continue;
+      }
+
+      const cBytes = await readMapFile(fileMap, containerFileRel);
+      if (!cBytes) {
+        diagnostics.skippedMissingContainer += 1;
+        continue;
+      }
+      const cv = new DataView(cBytes.buffer, cBytes.byteOffset, cBytes.byteLength);
+      let co = 0;
+      co += 4;
+      let cr = readI32(cv, co);
+      co = cr.o;
+      const fileCount = Math.max(0, cr.v);
+
+      for (let fi = 0; fi < fileCount; fi++) {
+        cr = readUtf16(cv, co, 64);
+        co = cr.o;
+        const fileName = cr.v;
+        const fileGuidOffset = co;
+        co += 32;
+
+        let resolved =
+          (await resolveBlobFromMap(fileMap, containerDirRel, cBytes, fileGuidOffset)) ||
+          (await resolveBlobFromMap(fileMap, containerDirRel, cBytes, fileGuidOffset + 16));
+        if (!resolved) {
+          diagnostics.skippedMissingBlob += 1;
+          continue;
+        }
+
+        const mapped = mapPalworldContainerName(containerName);
+        if (!mapped) continue;
+
+        entries.push({
+          containerName,
+          containerNum,
+          containerGuidHex,
+          fileName,
+          worldKey: mapped.worldKey,
+          relPath: mapped.relPath,
+          label: mapped.label,
+          blobName: resolved.blobName,
+          blobRelPath: resolved.blobRelPath,
+          blobBytes: resolved.bytes,
+          blobHandle: null,
+          locateMode: true,
+          _indexNameAt: nameAt,
+          _indexSizeAOffset: sizeAOffset,
+          _indexSizeBOffset: sizeBOffset,
+          _indexRelPath: indexPath,
+          _indexBytes: indexBytes,
+        });
+      }
+    }
+
+    entries._diagnostics = diagnostics;
+    entries._indexRelPath = indexPath;
+    entries._indexBytes = indexBytes;
+    entries._indexDir = indexDir;
+    entries._locateMode = true;
+    return entries;
+  }
+
+  function crc32(buf) {
+    let c = ~0;
+    const b = u8(buf);
+    for (let i = 0; i < b.length; i++) {
+      c ^= b[i];
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+    }
+    return ~c >>> 0;
+  }
+
+  /** Uncompressed ZIP (STORE) — extract over the user_* / wgs folder. */
+  function buildZipStore(files) {
+    const locals = [];
+    const centrals = [];
+    let offset = 0;
+    const enc = new TextEncoder();
+
+    for (const f of files) {
+      const name = normPath(f.name);
+      const data = u8(f.data);
+      const nameBytes = enc.encode(name);
+      const crc = crc32(data);
+      const local = new Uint8Array(30 + nameBytes.length + data.length);
+      const lv = new DataView(local.buffer);
+      lv.setUint32(0, 0x04034b50, true);
+      lv.setUint16(8, 0, true); // method STORE
+      lv.setUint32(14, crc, true);
+      lv.setUint32(18, data.length, true);
+      lv.setUint32(22, data.length, true);
+      lv.setUint16(26, nameBytes.length, true);
+      local.set(nameBytes, 30);
+      local.set(data, 30 + nameBytes.length);
+      locals.push(local);
+
+      const central = new Uint8Array(46 + nameBytes.length);
+      const cv = new DataView(central.buffer);
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(10, 0, true);
+      cv.setUint32(16, crc, true);
+      cv.setUint32(20, data.length, true);
+      cv.setUint32(24, data.length, true);
+      cv.setUint16(28, nameBytes.length, true);
+      cv.setUint32(42, offset, true);
+      central.set(nameBytes, 46);
+      centrals.push(central);
+      offset += local.length;
+    }
+
+    const centralStart = offset;
+    let centralSize = 0;
+    for (const c of centrals) centralSize += c.length;
+    const end = new Uint8Array(22);
+    const ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, files.length, true);
+    ev.setUint16(10, files.length, true);
+    ev.setUint32(12, centralSize, true);
+    ev.setUint32(16, centralStart, true);
+
+    const out = new Uint8Array(offset + centralSize + end.length);
+    let p = 0;
+    for (const l of locals) {
+      out.set(l, p);
+      p += l.length;
+    }
+    for (const c of centrals) {
+      out.set(c, p);
+      p += c.length;
+    }
+    out.set(end, p);
+    return out;
+  }
+
+  /**
+   * Build a patch ZIP for locate-mode Game Pass saves.
+   * Paths are relative to the folder that contains containers.index —
+   * extract the ZIP into that user_* folder (overwrite).
+   */
+  async function buildLocatePatchZip(worldFileMap, updates, meta) {
+    const wrote = [];
+    let indexBytes = null;
+    let indexRelPath = null;
+    const zipFiles = [];
+    const indexDir = normPath((meta && meta.indexDir) || "").replace(/\/?$/, (meta && meta.indexDir) ? "/" : "");
+    const sourceFileMap = (meta && meta.sourceFileMap) || null;
+
+    for (const [rel, bytes] of Object.entries(updates || {})) {
+      if (!bytes) continue;
+      const key = String(rel).replace(/\\/g, "/");
+      const entry = worldFileMap[key];
+      if (!entry || !entry.blobRelPath) {
+        throw new Error(`Game Pass container has no slot for ${key} — cannot write back.`);
+      }
+      const payload = u8(bytes);
+      let zipName = normPath(entry.blobRelPath);
+      if (indexDir && zipName.toLowerCase().startsWith(indexDir.toLowerCase())) {
+        zipName = zipName.slice(indexDir.length);
+      } else {
+        const parts = zipName.split("/");
+        zipName = parts.slice(-2).join("/");
+      }
+      zipFiles.push({ name: zipName || entry.blobName, data: payload });
+
+      if (
+        entry._indexBytes &&
+        Number.isFinite(entry._indexSizeBOffset) &&
+        entry._indexSizeBOffset >= 0
+      ) {
+        if (!indexBytes) {
+          indexBytes = entry._indexBytes.slice();
+          indexRelPath = entry._indexRelPath;
+        }
+        const view = new DataView(indexBytes.buffer, indexBytes.byteOffset, indexBytes.byteLength);
+        view.setUint32(entry._indexSizeBOffset, payload.length >>> 0, true);
+        view.setUint32(
+          entry._indexSizeBOffset + 4,
+          Math.floor(payload.length / 0x100000000) >>> 0,
+          true
+        );
+      }
+      wrote.push(key);
+    }
+
+    if (indexBytes) {
+      zipFiles.push({ name: "containers.index", data: indexBytes });
+      if (sourceFileMap && indexRelPath) {
+        try {
+          const orig = await readMapFile(sourceFileMap, indexRelPath);
+          if (orig) zipFiles.push({ name: "containers.index.gzo-backup", data: orig });
+        } catch (_) {}
+      }
+    }
+
+    if (!zipFiles.length) throw new Error("Nothing to write for Game Pass patch.");
+    const zipBytes = buildZipStore(zipFiles);
+    return { zipBytes, wrote, indexPatched: !!indexBytes };
+  }
+
   global.GzoXgp = {
     findContainersIndexDir,
     parseWgsUserDir,
+    parseWgsUserDirFromFiles,
+    buildFileMapFromList,
+    findContainersIndexPath,
     groupWorlds,
     filesMapForWorld,
     backupXgpBlobs,
     writeWorldBlobs,
+    buildLocatePatchZip,
     readHandleBytes,
     mapPalworldContainerName,
     formatNoWorldsError,
@@ -2036,6 +2446,136 @@ json.dumps(out, default=str)
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
+  /** Write via Save dialog (AppData / Downloads OK) or fall back to download. */
+  async function writeBytesOrDownload(bytes, filename) {
+    if (typeof global.showSaveFilePicker === "function") {
+      try {
+        const lower = String(filename || "").toLowerCase();
+        const ext = lower.includes(".") ? lower.slice(lower.lastIndexOf(".")) : "";
+        const types =
+          ext === ".zip"
+            ? [
+                {
+                  description: "Game Pass patch ZIP",
+                  accept: { "application/zip": [".zip"] },
+                },
+              ]
+            : [
+                {
+                  description: "Palworld save",
+                  accept: { "application/octet-stream": [".sav"] },
+                },
+              ];
+        const handle = await global.showSaveFilePicker({
+          suggestedName: filename,
+          types,
+        });
+        const w = await handle.createWritable();
+        await w.write(bytes);
+        await w.close();
+        return { mode: "saved", path: filename };
+      } catch (err) {
+        if (err && err.name === "AbortError") throw err;
+        // Fall through to download if Save picker fails / is blocked.
+      }
+    }
+    downloadBytes(bytes, filename);
+    return { mode: "downloaded", path: filename };
+  }
+
+  function pickDirectoryViaInput() {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.setAttribute("webkitdirectory", "");
+      input.setAttribute("directory", "");
+      input.multiple = true;
+      input.style.display = "none";
+      let settled = false;
+      const cleanup = () => {
+        clearTimeout(failSafe);
+        window.removeEventListener("focus", onFocus);
+        input.remove();
+      };
+      const abort = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        const err = new Error("cancelled");
+        err.name = "AbortError";
+        reject(err);
+      };
+      const finish = (files) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(files);
+      };
+      const onFocus = () => {
+        setTimeout(() => {
+          if (!settled && (!input.files || !input.files.length)) abort();
+        }, 800);
+      };
+      const failSafe = setTimeout(() => {
+        if (!settled && (!input.files || !input.files.length)) abort();
+      }, 180000);
+      input.addEventListener("change", () => {
+        const list = input.files ? Array.from(input.files) : [];
+        if (!list.length) {
+          abort();
+          return;
+        }
+        finish(list);
+      });
+      document.body.appendChild(input);
+      window.addEventListener("focus", onFocus);
+      input.click();
+    });
+  }
+
+  function normRelPath(file) {
+    return String(file.webkitRelativePath || file.name || "").replace(/\\/g, "/");
+  }
+
+  /** Pick world folder via classic dialog — works in AppData (Chrome directory picker does not). */
+  function resolveWorldFilesFromDirectory(fileList) {
+    const files = Array.from(fileList || []);
+    const levels = files.filter((f) => f.name.toLowerCase() === "level.sav");
+    if (!levels.length) {
+      throw new Error(
+        "Level.sav not found. Select the world folder that contains Level.sav (Steam: …\\SaveGames\\<id>\\<worldId>)."
+      );
+    }
+    levels.sort(
+      (a, b) =>
+        normRelPath(a).split("/").length - normRelPath(b).split("/").length ||
+        normRelPath(a).localeCompare(normRelPath(b))
+    );
+    const levelFile = levels[0];
+    const levelRel = normRelPath(levelFile);
+    const parts = levelRel.split("/");
+    const worldPrefix = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
+    const inWorld = (f) => {
+      const p = normRelPath(f);
+      if (!worldPrefix) return p === levelFile.name || !p.includes("/");
+      return p === levelRel || p.startsWith(worldPrefix + "/");
+    };
+    const worldFiles = files.filter(inWorld);
+    const playerFiles = worldFiles.filter((f) => {
+      const p = normRelPath(f);
+      return /\/Players\/[^/]+\.sav$/i.test(p) || /^Players\/[^/]+\.sav$/i.test(p);
+    });
+    const gpsFile =
+      worldFiles.find((f) => /_dps\.sav$/i.test(f.name)) ||
+      worldFiles.find((f) => f.name.toLowerCase() === "globalpalstorage.sav") ||
+      null;
+    const folderName =
+      (worldPrefix && worldPrefix.split("/").pop()) ||
+      levelFile.name.replace(/\.sav$/i, "") ||
+      "world";
+    return { levelFile, playerFiles, gpsFile, folderName, worldPrefix };
+  }
+
   async function collectHintsFromPlayerFiles(fileList) {
     const hints = {
       partyIds: [],
@@ -2150,7 +2690,7 @@ json.dumps(out, default=str)
       const msg = String(err && (err.message || err));
       if (/system file|not allowed|permission|abort/i.test(msg) && err.name !== "AbortError") {
         throw new Error(
-          "Chrome blocked that folder (AppData / system paths are not allowed). Copy your world folder to the Desktop, then open that copy — or use “Pick Level.sav file”."
+          "Chrome blocked that folder (AppData / system paths are not allowed). Use “Locate save folder” instead — it can open AppData. Or copy the world to Desktop and open that copy."
         );
       }
       throw err;
@@ -2239,16 +2779,356 @@ json.dumps(out, default=str)
     };
   }
 
+  /**
+   * Locate a world folder with the classic OS dialog.
+   * This can open AppData / Packages (showDirectoryPicker cannot on the website).
+   * Save uses the Save-file dialog (or download) — put files back in the same folder.
+   */
+  async function openWorldFolderLocate(onProgress) {
+    onProgress && onProgress("__HIDE_BUSY__");
+    onProgress &&
+      onProgress(
+        "Locate your world folder (AppData is OK) — pick the folder that contains Level.sav…"
+      );
+    const fileList = await pickDirectoryViaInput();
+    onProgress && onProgress("__SHOW_BUSY__");
+    const resolved = resolveWorldFilesFromDirectory(fileList);
+    await initEngine(onProgress);
+    onProgress && onProgress(`Reading ${resolved.levelFile.name}…`);
+    const savBytes = await readBlobFile(resolved.levelFile);
+    const { gvas, format: savFormat } = decompressSav(savBytes);
+
+    onProgress && onProgress("Reading Players…");
+    const playerEntries = [];
+    for (const f of resolved.playerFiles) {
+      try {
+        playerEntries.push({ name: f.name, bytes: await readBlobFile(f) });
+      } catch (e) {
+        console.warn("player read failed", f.name, e);
+      }
+    }
+    const hints = await collectHintsFromPlayerFiles(playerEntries);
+
+    let globalGvas = null;
+    let globalSavBytes = null;
+    let globalSavFormat = null;
+    let globalName = null;
+    if (resolved.gpsFile) {
+      try {
+        onProgress && onProgress(`Loading ${resolved.gpsFile.name}…`);
+        globalSavBytes = await readBlobFile(resolved.gpsFile);
+        const globalDec = decompressSav(globalSavBytes);
+        globalGvas = globalDec.gvas;
+        globalSavFormat = globalDec.format;
+        globalName = resolved.gpsFile.name;
+      } catch (e) {
+        console.warn("Global/DPS load failed", e);
+      }
+    }
+
+    onProgress && onProgress("Extracting pals & world data…");
+    const extracted = pyRun("extract", {
+      levelGvas: gvas,
+      globalGvas: globalGvas || undefined,
+      hints: {
+        partyIds: hints.partyIds,
+        palboxIds: hints.palboxIds,
+        inventory: hints.inventory,
+        technologyPoint: hints.technologyPoint,
+        bossTechnologyPoint: hints.bossTechnologyPoint,
+      },
+    });
+    const pals = extracted.pals;
+    const destinations = ensureGuildDestination(pals.destinations || []);
+    return {
+      ok: true,
+      sessionId: "browser-locate-" + Date.now(),
+      players: pals.players,
+      palCount: pals.palCount,
+      containers: pals.containers,
+      destinations,
+      pals: pals.pals,
+      world: extracted.world,
+      folderName: resolved.folderName,
+      savePath: "Level.sav",
+      locateMode: true,
+      _browser: {
+        rootHandle: null,
+        levelHandle: null,
+        worldDir: null,
+        playersDir: null,
+        levelGvas: gvas,
+        hints,
+        downloadOnly: true,
+        locateMode: true,
+        originalLevelSav: savBytes,
+        savFormat,
+        globalGvas,
+        globalSavBytes,
+        globalSavFormat,
+        globalHandle: null,
+        globalDirHandle: null,
+        globalName,
+      },
+    };
+  }
+
+  async function pickXgpWorld(worlds, worldPicker) {
+    let world = worlds[0];
+    if (worlds.length <= 1) return world;
+    const labels = worlds.map((w) => w.label || w.worldId);
+    if (typeof worldPicker === "function") {
+      const picked = await worldPicker(
+        worlds.map((w) => w.worldId),
+        labels
+      );
+      return worlds.find((w) => w.worldId === picked) || world;
+    }
+    const choice = global.prompt(
+      `Multiple Game Pass worlds/slots found. Enter the id to open:\n\n${worlds
+        .map((w) => `${w.worldId}${w.label && w.label !== w.worldId ? `  (${w.label})` : ""}`)
+        .join("\n")}`,
+      worlds[0].worldId
+    );
+    if (!choice) {
+      const err = new Error("cancelled");
+      err.name = "AbortError";
+      throw err;
+    }
+    const trimmed = choice.trim();
+    return (
+      worlds.find((w) => w.worldId === trimmed) ||
+      worlds.find((w) => (w.label || "") === trimmed) ||
+      world
+    );
+  }
+
+  function xgpCnkFormat(savFormat) {
+    return savFormat && savFormat.outerMagic === "CNK"
+      ? savFormat
+      : {
+          outerMagic: "CNK",
+          magic: "PlZ",
+          saveType: 0x32,
+          nested: true,
+          cnkType: 0x30,
+          cnkOuter0: 0,
+          cnkOuter1: 1,
+        };
+  }
+
+  async function loadXgpWorldSession({
+    onProgress,
+    world,
+    fileMap,
+    readBytes,
+    folderLabel,
+    locateMeta,
+  }) {
+    const levelEntry = fileMap["Level.sav"];
+    if (!levelEntry) {
+      throw new Error(
+        `World ${world.worldId} has no Level.sav container (files: ${Object.keys(fileMap).slice(0, 12).join(", ")}).`
+      );
+    }
+
+    onProgress && onProgress("Reading Level.sav from Game Pass…");
+    let savBytes;
+    let gvas;
+    let savFormat;
+    try {
+      savBytes = await readBytes(levelEntry);
+      ({ gvas, format: savFormat } = decompressSav(savBytes));
+    } catch (e) {
+      throw new Error(
+        `World data could not be loaded (Level.sav decompress failed): ${e.message || e}`
+      );
+    }
+
+    const playerFiles = [];
+    let gpsInfo = null;
+    for (const [rel, entry] of Object.entries(fileMap)) {
+      const norm = rel.replace(/\\/g, "/");
+      if (/^GlobalPalStorage\.sav$/i.test(norm)) {
+        gpsInfo = { entry, name: "GlobalPalStorage.sav", rel: norm };
+        continue;
+      }
+      if (!/^Players\//i.test(norm)) continue;
+      const name = norm.split("/").pop();
+      if (/_dps\.sav$/i.test(name)) {
+        if (!gpsInfo || name.startsWith("00000000")) {
+          gpsInfo = { entry, name, rel: norm };
+        }
+        continue;
+      }
+      if (/\.sav$/i.test(name)) {
+        playerFiles.push({ name, entry, rel: norm });
+      }
+    }
+
+    onProgress && onProgress("Reading Players…");
+    const playerEntries = [];
+    for (const p of playerFiles) {
+      try {
+        playerEntries.push({ name: p.name, bytes: await readBytes(p.entry) });
+      } catch (e) {
+        console.warn("Game Pass player read failed", p.name, e);
+      }
+    }
+    const hints = await collectHintsFromPlayerFiles(playerEntries);
+    hints.downloadOnly = !!locateMeta;
+
+    let globalGvas = null;
+    let globalSavBytes = null;
+    let globalSavFormat = null;
+    if (gpsInfo) {
+      try {
+        globalSavBytes = await readBytes(gpsInfo.entry);
+        const globalDec = decompressSav(globalSavBytes);
+        globalGvas = globalDec.gvas;
+        globalSavFormat = globalDec.format;
+        onProgress && onProgress(`Loaded ${gpsInfo.name}…`);
+      } catch (e) {
+        console.warn("Game Pass DPS load failed", e);
+      }
+    }
+
+    onProgress && onProgress("Extracting pals & world data…");
+    let extracted;
+    try {
+      extracted = pyRun("extract", {
+        levelGvas: gvas,
+        globalGvas: globalGvas || undefined,
+        hints: {
+          partyIds: hints.partyIds,
+          palboxIds: hints.palboxIds,
+          inventory: hints.inventory,
+          technologyPoint: hints.technologyPoint,
+          bossTechnologyPoint: hints.bossTechnologyPoint,
+        },
+      });
+    } catch (e) {
+      throw new Error(`World data could not be loaded: ${e.message || e}`);
+    }
+    const pals = extracted.pals;
+    const destinations = ensureGuildDestination(pals.destinations || []);
+    const locateMode = !!locateMeta;
+    return {
+      ok: true,
+      sessionId: (locateMode ? "browser-xgp-locate-" : "browser-xgp-") + Date.now(),
+      players: pals.players,
+      palCount: pals.palCount,
+      containers: pals.containers,
+      destinations,
+      pals: pals.pals,
+      world: extracted.world,
+      folderName: folderLabel,
+      savePath: "Level.sav (Game Pass)",
+      xgp: true,
+      xgpLocate: locateMode,
+      _browser: {
+        rootHandle: null,
+        levelHandle: locateMode ? null : levelEntry.blobHandle || null,
+        worldDir: null,
+        playersDir: null,
+        levelGvas: gvas,
+        hints,
+        downloadOnly: locateMode,
+        locateMode,
+        originalLevelSav: savBytes,
+        savFormat: xgpCnkFormat(savFormat),
+        globalGvas,
+        globalSavBytes,
+        globalSavFormat,
+        globalHandle: locateMode ? null : gpsInfo?.entry?.blobHandle || null,
+        globalDirHandle: null,
+        globalName: gpsInfo?.name || null,
+        xgp: true,
+        xgpLocate: locateMode,
+        xgpUserDir: null,
+        xgpWorld: world,
+        xgpFileMap: fileMap,
+        xgpGpsRel: gpsInfo?.rel || null,
+        xgpIndexDir: locateMeta?.indexDir || "",
+        xgpSourceFileMap: locateMeta?.sourceFileMap || null,
+      },
+    };
+  }
+
+  /**
+   * Locate Game Pass wgs via classic folder dialog (Packages / AppData OK).
+   * Save builds a patch ZIP — extract into the user_* folder that has containers.index.
+   */
+  async function openGamePassFolderLocate(onProgress, worldPicker) {
+    if (!global.GzoXgp) {
+      throw new Error("Game Pass module missing — rebuild gzo-data.js.");
+    }
+    const Xgp = global.GzoXgp;
+    onProgress && onProgress("__HIDE_BUSY__");
+    onProgress &&
+      onProgress(
+        "Locate Game Pass wgs (Packages OK) — pick SystemAppData\\wgs or the user_* folder…"
+      );
+    const fileList = await pickDirectoryViaInput();
+    onProgress && onProgress("__SHOW_BUSY__");
+    await initEngine(onProgress);
+
+    onProgress && onProgress("Indexing Game Pass files…");
+    const sourceFileMap = Xgp.buildFileMapFromList(fileList);
+    const indexPath = Xgp.findContainersIndexPath(sourceFileMap);
+    if (!indexPath) {
+      throw new Error(
+        "No containers.index found. Open …\\Packages\\PocketpairInc.Palworld_…\\SystemAppData\\wgs (or the user_* folder inside it)."
+      );
+    }
+    onProgress && onProgress("Reading Game Pass containers…");
+    const entries = await Xgp.parseWgsUserDirFromFiles(sourceFileMap, indexPath);
+    const worlds = Xgp.groupWorlds(entries);
+    if (!worlds.length) {
+      throw new Error(
+        (Xgp.formatNoWorldsError && Xgp.formatNoWorldsError(entries)) ||
+          "No Palworld worlds found in that Game Pass save."
+      );
+    }
+    const world = await pickXgpWorld(worlds, worldPicker);
+    const fileMap = Xgp.filesMapForWorld(world);
+    const indexDir = entries._indexDir || "";
+    return loadXgpWorldSession({
+      onProgress,
+      world,
+      fileMap,
+      readBytes: async (entry) => {
+        if (entry.blobBytes) return entry.blobBytes;
+        if (entry.blobRelPath) {
+          const f =
+            sourceFileMap.get(entry.blobRelPath) ||
+            sourceFileMap.get(String(entry.blobRelPath).toLowerCase());
+          if (f) return new Uint8Array(await f.arrayBuffer());
+        }
+        if (entry.blobHandle) return readFileHandle(entry.blobHandle);
+        throw new Error("Missing Game Pass blob data");
+      },
+      folderLabel: `Game Pass / ${world.worldId}`,
+      locateMeta: { indexDir, sourceFileMap, indexPath },
+    });
+  }
+
+  /** Primary Game Pass open — classic folder dialog works in Packages (no Desktop copy). */
   async function openGamePassFolder(onProgress, worldPicker) {
+    return openGamePassFolderLocate(onProgress, worldPicker);
+  }
+
+  /** Optional: writable Desktop copy of wgs (in-place blob write, no ZIP). */
+  async function openGamePassFolderWritable(onProgress, worldPicker) {
     if (!supportsFolderPicker()) {
-      throw new Error("Chrome or Edge is required to open a Game Pass wgs folder.");
+      throw new Error("Chrome or Edge is required to open a writable Game Pass wgs folder.");
     }
     if (!global.GzoXgp) {
       throw new Error("Game Pass module missing — rebuild gzo-data.js.");
     }
     const Xgp = global.GzoXgp;
     onProgress &&
-      onProgress("Pick your Game Pass wgs folder (Desktop copy of SystemAppData\\wgs)…");
+      onProgress("Pick a writable Game Pass wgs folder (Desktop copy of SystemAppData\\wgs)…");
     let rootHandle;
     try {
       rootHandle = await global.showDirectoryPicker({ mode: "readwrite" });
@@ -2256,7 +3136,7 @@ json.dumps(out, default=str)
       const msg = String(err && (err.message || err));
       if (/system file|not allowed|permission|abort/i.test(msg) && err.name !== "AbortError") {
         throw new Error(
-          "Chrome blocked AppData. Copy …\\Packages\\PocketpairInc.Palworld_…\\SystemAppData\\wgs to the Desktop, then open that copy."
+          "Chrome blocked that folder. Use Open Game Pass (Packages OK) instead, or copy wgs to Desktop."
         );
       }
       throw err;
@@ -2285,170 +3165,27 @@ json.dumps(out, default=str)
           "No Palworld worlds found in that Game Pass save."
       );
     }
-
-    let world = worlds[0];
-    if (worlds.length > 1) {
-      const labels = worlds.map(
-        (w) => w.label || w.worldId
-      );
-      if (typeof worldPicker === "function") {
-        const picked = await worldPicker(worlds.map((w) => w.worldId), labels);
-        world = worlds.find((w) => w.worldId === picked) || world;
-      } else {
-        const choice = global.prompt(
-          `Multiple Game Pass worlds/slots found. Enter the id to open:\n\n${worlds
-            .map((w) => `${w.worldId}${w.label && w.label !== w.worldId ? `  (${w.label})` : ""}`)
-            .join("\n")}`,
-          worlds[0].worldId
-        );
-        if (!choice) {
-          const err = new Error("cancelled");
-          err.name = "AbortError";
-          throw err;
-        }
-        const trimmed = choice.trim();
-        world =
-          worlds.find((w) => w.worldId === trimmed) ||
-          worlds.find((w) => (w.label || "") === trimmed) ||
-          world;
-      }
-    }
-
+    const world = await pickXgpWorld(worlds, worldPicker);
     const fileMap = Xgp.filesMapForWorld(world);
-    const levelEntry = fileMap["Level.sav"];
-    if (!levelEntry) {
-      throw new Error(
-        `World ${world.worldId} has no Level.sav container (files: ${Object.keys(fileMap).slice(0, 12).join(", ")}).`
-      );
-    }
-
-    onProgress && onProgress("Reading Level.sav from Game Pass…");
-    let savBytes;
-    let gvas;
-    let savFormat;
-    try {
-      savBytes = await readFileHandle(levelEntry.blobHandle);
-      ({ gvas, format: savFormat } = decompressSav(savBytes));
-    } catch (e) {
-      throw new Error(
-        `World data could not be loaded (Level.sav decompress failed): ${e.message || e}`
-      );
-    }
-
-    const playerFiles = [];
-    let gpsInfo = null;
-    for (const [rel, entry] of Object.entries(fileMap)) {
-      const norm = rel.replace(/\\/g, "/");
-      if (/^GlobalPalStorage\.sav$/i.test(norm)) {
-        gpsInfo = {
-          handle: entry.blobHandle,
-          name: "GlobalPalStorage.sav",
-          dirHandle: userDir,
-          rel: norm,
-        };
-        continue;
-      }
-      if (!/^Players\//i.test(norm)) continue;
-      const name = norm.split("/").pop();
-      if (/_dps\.sav$/i.test(name)) {
-        if (!gpsInfo || name.startsWith("00000000")) {
-          gpsInfo = { handle: entry.blobHandle, name, dirHandle: userDir, rel: norm };
-        }
-        continue;
-      }
-      if (/\.sav$/i.test(name)) {
-        playerFiles.push({ name, handle: entry.blobHandle, rel: norm });
-      }
-    }
-
-    onProgress && onProgress("Reading Players…");
-    const hints = await collectHintsFromPlayerFiles(playerFiles);
-    hints.downloadOnly = false;
-
-    let globalGvas = null;
-    let globalSavBytes = null;
-    let globalSavFormat = null;
-    if (gpsInfo) {
-      try {
-        globalSavBytes = await readFileHandle(gpsInfo.handle);
-        const globalDec = decompressSav(globalSavBytes);
-        globalGvas = globalDec.gvas;
-        globalSavFormat = globalDec.format;
-        onProgress && onProgress(`Loaded ${gpsInfo.name}…`);
-      } catch (e) {
-        console.warn("Game Pass DPS load failed", e);
-      }
-    }
-
-    onProgress && onProgress("Extracting pals & world data…");
-    const extractHints = {
-      partyIds: hints.partyIds,
-      palboxIds: hints.palboxIds,
-      inventory: hints.inventory,
-      technologyPoint: hints.technologyPoint,
-      bossTechnologyPoint: hints.bossTechnologyPoint,
-    };
-    let extracted;
-    try {
-      extracted = pyRun("extract", {
-        levelGvas: gvas,
-        globalGvas: globalGvas || undefined,
-        hints: extractHints,
-      });
-    } catch (e) {
-      throw new Error(
-        `World data could not be loaded: ${e.message || e}`
-      );
-    }
-    const pals = extracted.pals;
-    const destinations = ensureGuildDestination(pals.destinations || []);
-    return {
-      ok: true,
-      sessionId: "browser-xgp-" + Date.now(),
-      players: pals.players,
-      palCount: pals.palCount,
-      containers: pals.containers,
-      destinations,
-      pals: pals.pals,
-      world: extracted.world,
-      folderName: `${rootHandle.name} / ${world.worldId}`,
-      savePath: "Level.sav (Game Pass)",
-      xgp: true,
-      _browser: {
-        rootHandle: userDir,
-        levelHandle: levelEntry.blobHandle,
-        worldDir: userDir,
-        playersDir: null,
-        levelGvas: gvas,
-        hints,
-        downloadOnly: false,
-        originalLevelSav: savBytes,
-        // Game Pass worlds must keep CNK wrapping on write-back.
-        savFormat:
-          savFormat && savFormat.outerMagic === "CNK"
-            ? savFormat
-            : {
-                outerMagic: "CNK",
-                magic: "PlZ",
-                saveType: 0x32,
-                nested: true,
-                cnkType: 0x30,
-                cnkOuter0: 0,
-                cnkOuter1: 1,
-              },
-        globalGvas,
-        globalSavBytes,
-        globalSavFormat,
-        globalHandle: gpsInfo?.handle || null,
-        globalDirHandle: userDir,
-        globalName: gpsInfo?.name || null,
-        xgp: true,
-        xgpUserDir: userDir,
-        xgpWorld: world,
-        xgpFileMap: fileMap,
-        xgpGpsRel: gpsInfo?.rel || null,
-      },
-    };
+    const session = await loadXgpWorldSession({
+      onProgress,
+      world,
+      fileMap,
+      readBytes: (entry) => readFileHandle(entry.blobHandle),
+      folderLabel: `${rootHandle.name} / ${world.worldId}`,
+      locateMeta: null,
+    });
+    session._browser.rootHandle = userDir;
+    session._browser.levelHandle = fileMap["Level.sav"]?.blobHandle || null;
+    session._browser.worldDir = userDir;
+    session._browser.globalHandle = session._browser.xgpGpsRel
+      ? fileMap[session._browser.xgpGpsRel]?.blobHandle || null
+      : null;
+    session._browser.globalDirHandle = userDir;
+    session._browser.xgpUserDir = userDir;
+    session._browser.downloadOnly = false;
+    session._browser.hints.downloadOnly = false;
+    return session;
   }
 
   function pickFilesViaInput({ accept, multiple }) {
@@ -2625,14 +3362,6 @@ json.dumps(out, default=str)
     let techWrote = false;
 
     if (b.xgp && b.xgpFileMap && global.GzoXgp) {
-      onProgress && onProgress("Backing up Game Pass blobs…");
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      folderBackupPath = await global.GzoXgp.backupXgpBlobs(
-        b.xgpUserDir,
-        b.xgpWorld,
-        stamp
-      );
-      onProgress && onProgress("Writing saves back into Game Pass containers…");
       const updates = { "Level.sav": sav };
       if (b.globalGvas) {
         const dpsKey =
@@ -2683,6 +3412,76 @@ json.dumps(out, default=str)
           }
         }
       }
+
+      // Packages / locate mode: no writable handles → patch ZIP to extract into user_*
+      if (b.xgpLocate || b.locateMode || !b.xgpUserDir) {
+        onProgress && onProgress("Building Game Pass patch ZIP…");
+        const patch = await global.GzoXgp.buildLocatePatchZip(b.xgpFileMap, updates, {
+          indexDir: b.xgpIndexDir || "",
+          sourceFileMap: b.xgpSourceFileMap || null,
+        });
+        onProgress &&
+          onProgress(
+            "Save gzo-xgp-patch.zip — extract into the user_* folder (overwrite), quit Xbox sync first."
+          );
+        const zipOut = await writeBytesOrDownload(patch.zipBytes, "gzo-xgp-patch.zip");
+        wrotePath =
+          zipOut.mode === "saved"
+            ? `(saved) gzo-xgp-patch.zip ← ${patch.wrote.join(", ")}`
+            : `(downloaded) gzo-xgp-patch.zip ← ${patch.wrote.join(", ")}`;
+        backupName = "containers.index.gzo-backup (inside zip)";
+        folderBackupPath = backupName;
+
+        const palsPayloadLocate = result.pals || {};
+        if (!palsPayloadLocate.pals) {
+          onProgress && onProgress("Refreshing pal list…");
+          const refreshed = pyRun("extract", {
+            levelGvas: b.levelGvas,
+            globalGvas: b.globalGvas || undefined,
+            hints: {
+              partyIds: b.hints.partyIds,
+              palboxIds: b.hints.palboxIds,
+              inventory: b.hints.inventory,
+              technologyPoint: b.hints.technologyPoint,
+              bossTechnologyPoint: b.hints.bossTechnologyPoint,
+            },
+          });
+          Object.assign(palsPayloadLocate, refreshed.pals || {});
+          if (refreshed.world) result.world = refreshed.world;
+        }
+        return {
+          ok: true,
+          changed: result.changed,
+          deleted: result.deleted ?? 0,
+          created: result.created ?? 0,
+          newPals: result.newPals || [],
+          playersChanged: result.playersChanged ?? 0,
+          inventoryChanged: result.inventoryChanged ?? 0,
+          techWrote,
+          palCount: palsPayloadLocate.palCount,
+          pals: palsPayloadLocate.pals,
+          destinations: ensureGuildDestination(palsPayloadLocate.destinations || []),
+          world: result.world,
+          wrotePath,
+          wroteGlobalPath,
+          backupName,
+          folderBackupPath,
+          byteLength: sav.length,
+          downloadOnly: true,
+          xgp: true,
+          xgpLocate: true,
+          guildCreated: guildCreates.length,
+        };
+      }
+
+      onProgress && onProgress("Backing up Game Pass blobs…");
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      folderBackupPath = await global.GzoXgp.backupXgpBlobs(
+        b.xgpUserDir,
+        b.xgpWorld,
+        stamp
+      );
+      onProgress && onProgress("Writing saves back into Game Pass containers…");
       const wrote = await global.GzoXgp.writeWorldBlobs(b.xgpFileMap, updates);
       wrotePath = `Game Pass ← ${wrote.join(", ")}`;
       backupName = `gzo-xgp-backups/${folderBackupPath}`;
@@ -2729,12 +3528,21 @@ json.dumps(out, default=str)
     }
 
     if (b.downloadOnly || !b.worldDir || !b.levelHandle) {
-      onProgress && onProgress("Downloading backup + edited Level.sav…");
+      onProgress &&
+        onProgress(
+          b.locateMode
+            ? "Save dialog: overwrite Level.sav in your save folder (or download)…"
+            : "Saving Level.sav (Save dialog or download)…"
+        );
       if (b.originalLevelSav) {
-        downloadBytes(b.originalLevelSav, backupName);
+        await writeBytesOrDownload(b.originalLevelSav, "Level.sav.gzo-backup");
       }
-      downloadBytes(sav, "Level.sav");
-      wrotePath = "(downloaded) Level.sav";
+      const levelOut = await writeBytesOrDownload(sav, "Level.sav");
+      wrotePath =
+        levelOut.mode === "saved"
+          ? `(saved) Level.sav`
+          : `(downloaded) Level.sav`;
+      backupName = "Level.sav.gzo-backup";
     } else {
       onProgress && onProgress("Backing up whole world folder…");
       folderBackupPath = await backupWorldFolder(b.worldDir);
@@ -2752,9 +3560,12 @@ json.dumps(out, default=str)
       const gpsSav = compressGvasToSav(b.globalGvas, b.globalSavFormat || b.savFormat);
       const gpsName = b.globalName || "GlobalPalStorage.sav";
       if (b.downloadOnly || !b.globalHandle || !b.globalDirHandle) {
-        if (b.globalSavBytes) downloadBytes(b.globalSavBytes, gpsName + ".gzo-backup");
-        downloadBytes(gpsSav, gpsName);
-        wroteGlobalPath = `(downloaded) ${gpsName}`;
+        if (b.globalSavBytes) {
+          await writeBytesOrDownload(b.globalSavBytes, gpsName + ".gzo-backup");
+        }
+        const gpsOut = await writeBytesOrDownload(gpsSav, gpsName);
+        wroteGlobalPath =
+          gpsOut.mode === "saved" ? `(saved) ${gpsName}` : `(downloaded) ${gpsName}`;
       } else {
         await writeBackupAndReplace(b.globalHandle, b.globalDirHandle, gpsName, gpsSav);
         wroteGlobalPath = gpsName;
@@ -2782,8 +3593,8 @@ json.dumps(out, default=str)
       );
       const playerName = b.hints.hostPlayerName || "Player.sav";
       if (b.downloadOnly || !b.playersDir || !b.hints.hostPlayerHandle) {
-        downloadBytes(playerSav, playerName + ".gzo-backup");
-        downloadBytes(playerOut, playerName);
+        await writeBytesOrDownload(playerSav, playerName + ".gzo-backup");
+        await writeBytesOrDownload(playerOut, playerName);
       } else {
         await writeBackupAndReplace(
           b.hints.hostPlayerHandle,
@@ -2847,7 +3658,10 @@ json.dumps(out, default=str)
     initEngine,
     supportsFolderPicker,
     openWorldFolder,
+    openWorldFolderLocate,
     openGamePassFolder,
+    openGamePassFolderLocate,
+    openGamePassFolderWritable,
     openWorldFiles,
     saveSession,
     isReady: () => engineReady,
