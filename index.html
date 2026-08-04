@@ -346,6 +346,7 @@
         #07151a;
     }
 
+
     .hud-btn--cc {
       border-color: rgba(240, 160, 26, 0.8);
       background:
@@ -365,10 +366,59 @@
 
 
 
+    .cta-strip {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+    }
+
     .discord-strip {
       margin-top: 20px;
       display: flex;
       justify-content: center;
+    }
+
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #041018;
+      border: 1px solid rgba(255, 215, 0, 0.65);
+      background: linear-gradient(180deg, #ffe566 0%, #ffd700 55%, #e6c200 100%);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+
+    .download-link:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    }
+
+    .download-link svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .download-note {
+      width: 100%;
+      text-align: center;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      letter-spacing: 0.02em;
     }
 
     .discord-link {
@@ -556,7 +606,7 @@
 
   <header class="brand">
     <h1>GameZoneOfficial</h1>
-    <p>Save-Editors</p>
+    <p>Save-Editors · Companion App</p>
   </header>
 
   <div class="hud-shell">
@@ -599,7 +649,13 @@
       </a>
     </nav>
 
-    <div class="discord-strip">
+        <div class="cta-strip">
+      <a class="download-link" href="https://github.com/Ynot-GZO/GameZoneOfficial/releases/latest/download/GZO-Companion.exe" download="GZO-Companion.exe">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L11 12.59V4a1 1 0 0 1 1-1zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1z"/>
+        </svg>
+        Download GZO Companion
+      </a>
       <a
         class="discord-link"
         href="https://discord.gg/4hGKAHdvp6"
@@ -611,6 +667,7 @@
         </svg>
         Discord — GameZoneOfficial
       </a>
+      <p class="download-note">Windows portable · Palworld live companion · v0.5.28</p>
     </div>
   </div>
 
