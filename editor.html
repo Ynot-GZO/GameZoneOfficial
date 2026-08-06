@@ -870,27 +870,28 @@
       <p class="muted">Quit Palworld before saving. Use <strong>Chrome</strong> or <strong>Edge</strong>.</p>
 
       <div id="localBridgePanel" class="notice ok hidden" style="margin-top:14px;text-align:left;max-width:640px;margin-left:auto;margin-right:auto;">
-        <strong>Local bridge active</strong> — pick a world below, or paste a path. You can still use a Desktop copy with <strong>Open world folder</strong>.
+        <strong>Local bridge active</strong> — open your real save folder in AppData. No Desktop copy.
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <input type="text" id="savePathInput" placeholder="Paste world folder path or Level.sav path…" style="flex:1;min-width:220px;padding:10px 12px;border-radius:8px;border:1px solid #405174;background:#0f1522;color:#e9eef8;font-size:.9rem;">
-          <button type="button" class="btn" id="locateFolderBtn" style="font-size:1.05rem;padding:12px 18px;">Browse…</button>
+          <button type="button" class="btn primary" id="locateFolderBtn" style="font-size:1.05rem;padding:12px 18px;">Locate folder…</button>
           <button type="button" class="btn" id="loadPathBtn" style="padding:12px 18px;">Load path</button>
         </div>
         <p class="muted" style="margin:10px 0 0;font-size:.82rem;">Steam default: <code>%LOCALAPPDATA%\Pal\Saved\SaveGames\&lt;steamId&gt;\&lt;worldId&gt;</code></p>
       </div>
 
       <div id="browserOnlyNotice" class="notice" style="margin-top:14px;text-align:left;max-width:640px;margin-left:auto;margin-right:auto;">
-        <strong>Copy your save to Desktop, then open that folder</strong>
+        <strong>Locate your save folder</strong> — AppData / Packages work. No Desktop copy.
         <ul style="margin:8px 0 0;padding-left:18px;font-size:.88rem;color:#c5d0e0;">
-          <li><strong>Steam:</strong> copy the world folder (the one with <code>Level.sav</code>) from <code>%LOCALAPPDATA%\Pal\Saved\SaveGames\&lt;steamId&gt;\</code> onto your Desktop → <strong>Open world folder</strong></li>
-          <li><strong>Game Pass:</strong> quit Palworld + Xbox cloud sync → copy <code>…\Packages\PocketpairInc.Palworld_…\SystemAppData\wgs</code> to Desktop → <strong>Open Game Pass (Desktop wgs)</strong></li>
-          <li><strong>After save:</strong> copy the edited folder back over the original (Steam world folder / Game Pass <code>wgs</code>)</li>
+          <li><strong>Steam:</strong> <strong>Locate save folder</strong> → <code>%LOCALAPPDATA%\Pal\Saved\SaveGames\&lt;steamId&gt;\&lt;worldId&gt;</code></li>
+          <li><strong>Game Pass:</strong> quit Palworld + Xbox cloud sync → <strong>Open Game Pass (wgs)</strong> → <code>…\Packages\PocketpairInc.Palworld_…\SystemAppData\wgs</code> (or the <code>user_*</code> folder)</li>
+          <li><strong>Game Pass save:</strong> gets <code>gzo-xgp-patch.zip</code> — extract into that same <code>user_*</code> folder (overwrite). Includes updated <code>containers.index</code>.</li>
         </ul>
       </div>
 
       <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-        <button type="button" class="btn primary" id="openFolderBtn" style="font-size:1.05rem;padding:12px 22px;">Open world folder</button>
-        <button type="button" class="btn" id="openGamePassBtn" style="font-size:1.05rem;padding:12px 22px;border-color:#6fd39a;color:#c8f5dc;">Open Game Pass (Desktop wgs)</button>
+        <button type="button" class="btn primary" id="locateSaveFolderBtn" style="font-size:1.05rem;padding:12px 22px;">Locate save folder</button>
+        <button type="button" class="btn" id="openFolderBtn" style="font-size:1.05rem;padding:12px 22px;">Open writable folder</button>
+        <button type="button" class="btn" id="openGamePassBtn" style="font-size:1.05rem;padding:12px 22px;border-color:#6fd39a;color:#c8f5dc;">Open Game Pass (Packages OK)</button>
         <button type="button" class="btn" id="openFilesBtn" style="font-size:1.05rem;padding:12px 22px;">Pick Level.sav file…</button>
       </div>
 
@@ -898,7 +899,7 @@
         <div id="worldList" class="world-list"><div class="empty">Looking for local bridge…</div></div>
       </div>
 
-      <p class="muted" style="margin-top:14px;font-size:.82rem;">Writable Desktop folders keep backups under <code>gzo-backups\…</code> (or <code>gzo-xgp-backups\…</code> for Game Pass).</p>
+      <p class="muted" style="margin-top:14px;font-size:.82rem;">Locate mode: Save dialog writes back into your folder. Writable-folder mode (non-AppData) keeps in-folder backups under <code>gzo-backups\…</code>.</p>
     </section>
 
     <section id="workspace" class="hidden">
@@ -932,6 +933,7 @@
               <button type="button" class="btn primary" id="tabPresetMaxLegit">Max Legit (all)</button>
               <button type="button" class="btn" id="tabPresetMaxModded" style="border-color:#c56cf6;color:#e9d4ff;">Max Modded (all)</button>
               <button type="button" class="btn" id="tabPresetHealTrustMoves" title="Full HP/stomach/sanity, Trust 10, unlock all attack moves">Heal + Trust + Moves</button>
+              <button type="button" class="btn" id="tabPresetUnlockAttacks" title="Learn every active skill (MasteredWaza) on every pal in this tab">Unlock all attacks</button>
               <button type="button" class="btn danger" id="tabPresetDeleteGhosts" title="Remove lucky Teafant / page-separator leftovers from Receive Paldex">Delete invisible separators</button>
               <button type="button" class="btn danger" id="tabPresetDeleteAll">Delete All</button>
             </div>
@@ -1091,8 +1093,9 @@
 
             <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
               <button type="button" class="btn primary" id="applyPalBtn">Apply stats</button>
+              <button type="button" class="btn" id="unlockAttacksBtn" title="Learn every active skill (MasteredWaza). Works on existing or staged creates.">Unlock all attacks</button>
             </div>
-            <p class="muted" style="margin-top:10px;font-size:.82rem;">Stage changes, then click <strong>Save Level.sav</strong>.</p>
+            <p class="muted" style="margin-top:10px;font-size:.82rem;">Stage changes, then click <strong>Save Level.sav</strong>. New creates already unlock all attacks on save.</p>
           </form>
 
           <div id="createPanel" class="hidden">
@@ -1183,6 +1186,12 @@
             <div id="cWorkSuitGrid" class="field-grid"></div>
                 <p class="muted" id="cPassiveHelp" style="margin:10px 0 6px;font-size:.78rem;">Passives (up to 4)</p>
             <div id="cPassiveSlots"></div>
+            <div class="field field-check full" style="margin-top:10px;">
+              <label class="check-label">
+                <input id="cUnlockAllAttacks" type="checkbox" checked>
+                Unlock all attack skills
+              </label>
+            </div>
             <div class="move-row" style="margin-top:12px;flex-wrap:wrap;">
               <button type="button" class="btn" id="cPresetMax">Max stats</button>
               <button type="button" class="btn primary" id="stageCreateBtn">Stage new pal</button>
@@ -1350,10 +1359,10 @@
         <div id="paldexStepFill" class="hidden">
           <p id="paldexFillIntro" style="margin:0 0 10px;">Choose how to fill the target box:</p>
           <div class="modal-actions" style="flex-direction:column;align-items:stretch;gap:8px;">
-            <button type="button" class="btn primary" id="paldexFillAll">Add full pack (keep yours)</button>
-            <p class="muted" style="margin:0;font-size:.8rem;">Recommended. Keeps yours. Stages one of every species (~541) — duplicates OK. Then click Save.</p>
-            <button type="button" class="btn" id="paldexFillMissing">Add missing species only</button>
-            <p class="muted" style="margin:0;font-size:.8rem;">Keeps yours. Only adds species you do not already own anywhere (party, bases, Palbox, Guild). If you already have a full catalog, this adds <strong>0</strong>.</p>
+            <button type="button" class="btn primary" id="paldexFillMissing">Add missing species only</button>
+            <p class="muted" style="margin:0;font-size:.8rem;">Keeps yours. Adds species you do not already own (party, bases, Palbox, Guild).</p>
+            <button type="button" class="btn" id="paldexFillAll">Add full pack (keep yours)</button>
+            <p class="muted" style="margin:0;font-size:.8rem;">Keeps yours. Adds one of every species (duplicates allowed).</p>
             <button type="button" class="btn danger" id="paldexFillReplace">Delete target box &amp; replace</button>
             <p class="muted" style="margin:0;font-size:.8rem;">Deletes every pal currently in the chosen box, then stages the pack.</p>
             <button type="button" class="btn" id="paldexFillBack">Back</button>
@@ -1443,6 +1452,7 @@
       presetPanelOpen: false,
       moddedPals: false,
       deletes: new Set(),
+      recentCreateIds: null,
       paldexWizard: { fillMode: null, modded: null },
       editorMode: "pals",
       world: { players: [], bags: [], worldContainers: [], tech: {} },
@@ -2519,7 +2529,6 @@
 
     function speciesSpecialTag(code) {
       const c = String(code || "").toLowerCase();
-      if (/^(securitydrone|wildlifesanctuarydrone)/.test(c)) return "Heli/Drone";
       if (/^(boss_|predator_|raid_|gym_|summon_|grassboss|dessertboss|forestboss|volcanoboss)/.test(c)) {
         return "Boss";
       }
@@ -2604,23 +2613,6 @@
       if (!raw) return "";
       const want = raw.toLowerCase();
       const ids = window.PAL_IDS || {};
-      const work = state.palWork || window.PAL_WORK || {};
-
-      // Keep Boss_/Predator_/Raid_/Gym_/Summon_ forms. PAL_IDS often aliases
-      // predator_* → base pal, which would destroy the intended CharacterID.
-      if (/^(boss_|predator_|raid_|gym_|summon_)/i.test(want)) {
-        for (const k of Object.keys(work)) {
-          if (k.toLowerCase() === want) return k;
-        }
-        const via = ids[want];
-        if (via && /^(Boss_|Predator_|Raid_|Gym_|Summon_)/i.test(String(via))) return via;
-        if (/^(Boss_|Predator_|Raid_|Gym_|Summon_)/.test(raw)) return raw;
-        return raw
-          .split("_")
-          .map((p) => (p ? p.charAt(0).toUpperCase() + p.slice(1) : ""))
-          .join("_");
-      }
-
       if (ids[want]) return ids[want];
       const stripped = want.replace(/^(boss_|predator_)/, "");
       if (stripped !== want && ids[stripped]) return ids[stripped];
@@ -2633,6 +2625,7 @@
         dispMap.get(wantCompact);
       if (hit) return hit;
 
+      const work = state.palWork || window.PAL_WORK || {};
       let best = "";
       for (const k of Object.keys(work)) {
         if (k.toLowerCase() !== want && k.toLowerCase() !== stripped) continue;
@@ -2659,9 +2652,8 @@
       const work = state.palWork || window.PAL_WORK || {};
       const ids = window.PAL_IDS || {};
       const noWork = new Set((window.PAL_NO_WORK || []).map((k) => String(k).toLowerCase()));
-      // Core-pal filter only. Helicopters / tower / world bosses / NPCs come from PALDEX_SPECIALS.
       const skipRe =
-        /^(arena_|ambassador|police|female_|male_|npc|test|raid_|gym_|bossdefeat|presenter|hunter_|ninja|darktrader|soldier\d|syndicate|firecult|moonflower|wildlife|forestboss|dessertboss|volcanoboss|believer_|blacksmith|caravan|bountytrader|scientist_|farmer|guard_|quest_|salesperson|paldealer|paltrader|visitor_|reward_|help\d|emote_|mobu|doctor$|inspector|epicure|weaponsdealer|respawn_|deathpenalty|robbery|randomevent|security|yamishima|yakushima|escort_|predator_|boss_|summon_)/i;
+        /^(arena_|ambassador|police|female_|male_|npc|test|raid_|gym_|bossdefeat|presenter|hunter_|ninja|darktrader|soldier|syndicate|firecult|moonflower|wildlife|forestboss|dessertboss|volcanoboss|believer_|blacksmith|caravan|bountytrader|scientist_|farmer)/i;
       const skipPartRe = /_quest_|_otomo|_field|_invader|_tower|_prisoner|_oilrig|_hand_|_head|_minioilrig|_camp|_bossrush/i;
 
       function eligible(code) {
@@ -2684,6 +2676,7 @@
         Object.values(ids).map((v) => String(v).toLowerCase())
       );
 
+      // Resolve each work key once (was O(species × work × names) and froze Guild click).
       const workNorms = new Set();
       for (const k of Object.keys(work)) {
         if (!eligible(k)) continue;
@@ -2713,19 +2706,6 @@
       }
       for (const n of workNorms) add(ids[n] || n);
       for (const s of state.speciesCatalog || []) add(s.code);
-
-      // Curated helicopters, tower bosses, world boss NPCs, factions, raids, predators…
-      for (const spec of window.PALDEX_SPECIALS || []) {
-        const cid = String(spec.characterId || spec || "").trim();
-        if (!cid) continue;
-        const n = normCharacterId(cid);
-        if (!n) continue;
-        const prev = byNorm.get(n);
-        // Prefer keeping the explicit special CharacterID (Gym_/Boss_/Predator_/…).
-        if (!prev || speciesCodeScore(cid) <= speciesCodeScore(prev)) {
-          byNorm.set(n, cid);
-        }
-      }
 
       const list = [...byNorm.values()]
         .sort((a, b) => resolveDisplayName(a).localeCompare(resolveDisplayName(b)))
@@ -3131,6 +3111,7 @@
         palVariant: $("cPalVariant").value,
         workSuitability: readCreateWorkSuit(),
         passives: readCreatePassives(),
+        unlockAllMoves: !!$("cUnlockAllAttacks")?.checked,
       };
     }
 
@@ -3251,6 +3232,7 @@
       if ($("openFolderBtn")) $("openFolderBtn").disabled = true;
       if ($("openGamePassBtn")) $("openGamePassBtn").disabled = true;
       if ($("openFilesBtn")) $("openFilesBtn").disabled = true;
+      if ($("locateSaveFolderBtn")) $("locateSaveFolderBtn").disabled = true;
       if ($("locateFolderBtn")) $("locateFolderBtn").disabled = true;
       if ($("loadPathBtn")) $("loadPathBtn").disabled = true;
       if ($("saveBtn")) $("saveBtn").disabled = true;
@@ -3287,6 +3269,7 @@
       if ($("openFolderBtn")) $("openFolderBtn").disabled = false;
       if ($("openGamePassBtn")) $("openGamePassBtn").disabled = false;
       if ($("openFilesBtn")) $("openFilesBtn").disabled = false;
+      if ($("locateSaveFolderBtn")) $("locateSaveFolderBtn").disabled = false;
       if ($("locateFolderBtn")) $("locateFolderBtn").disabled = !localCanPickFolder;
       if ($("loadPathBtn")) $("loadPathBtn").disabled = false;
       syncPendingSave();
@@ -3467,6 +3450,7 @@
       return state.creates.map((c, i) => {
         const dest = destinationForId(c.containerId);
         const containerId = dest?.containerId || dest?.id || c.containerId.split("|")[0];
+        const passives = Array.isArray(c.passives) ? c.passives.filter(Boolean) : [];
         return {
           index: -(i + 1),
           instanceId: `pending-create-${i}`,
@@ -3474,6 +3458,16 @@
           nickname: c.nickname || "",
           level: c.level,
           rank: c.rank ?? 0,
+          rankHp: c.rankHp ?? 0,
+          rankAttack: c.rankAttack ?? 0,
+          rankDefense: c.rankDefense ?? 0,
+          rankWork: c.rankWork ?? 0,
+          talentHp: c.talentHp,
+          talentAttack: c.talentAttack,
+          talentDefense: c.talentDefense,
+          passives,
+          isAwakening: !!c.isAwakening,
+          workSuitability: c.workSuitability || emptyWorkSuit(),
           location: dest?.label || "?",
           locationKind: dest?.kind || "other",
           containerId,
@@ -3491,6 +3485,12 @@
     function isOrphanedPal(p) {
       // Leftover co-op / unlinked Level containers — still in the file, but not
       // your live Palbox / Guild / Party. Hide from the editor by default.
+      // Keep freshly created pals visible even if container labeling is wrong
+      // until the game reloads and re-links boxes.
+      const iid = String(p?.instanceId || "").toLowerCase();
+      if (iid && state.recentCreateIds && state.recentCreateIds.has(iid)) {
+        return false;
+      }
       return resolvePalLocationKind(p) === "storage" || p.locationKind === "storage";
     }
 
@@ -3523,21 +3523,54 @@
 
     function revealPalsAfterSave(createSpecs, newPals) {
       const spec = createSpecs?.length ? createSpecs[createSpecs.length - 1] : null;
-      if (spec?.containerId) focusFilterForDestination(spec.containerId);
+      state.recentCreateIds = new Set(
+        (newPals || [])
+          .map((n) => String(n?.instanceId || "").toLowerCase())
+          .filter(Boolean)
+      );
       let pal = null;
       if (newPals?.length) {
-        const last = newPals[newPals.length - 1];
-        pal =
-          state.pals.find((p) => idsEqual(p.instanceId, last.instanceId)) ||
-          state.pals.find((p) => p.index === last.index);
+        // Prefer the last created pal; fall back through the whole batch.
+        for (let i = newPals.length - 1; i >= 0 && !pal; i--) {
+          const meta = newPals[i];
+          pal =
+            state.pals.find((p) => idsEqual(p.instanceId, meta.instanceId)) ||
+            state.pals.find((p) => p.index === meta.index) ||
+            null;
+        }
       }
       if (!pal && spec) {
-        const cid = spec.containerId.split("|")[0];
-        pal = [...state.pals]
-          .reverse()
-          .find((p) => idsEqual(p.containerId, cid));
+        const cid = String(spec.containerId || "").split("|")[0];
+        pal =
+          [...state.pals]
+            .reverse()
+            .find(
+              (p) =>
+                idsEqual(p.characterId, spec.characterId) &&
+                (idsEqual(p.containerId, cid) ||
+                  idsEqual(String(p.nickname || ""), String(spec.nickname || "")))
+            ) || null;
       }
-      if (pal && pal.index >= 0) selectPal(pal.index);
+      if (pal && pal.index >= 0) {
+        // Match the tab to where the pal actually landed. If classification is
+        // still Unknown/storage, show All so it doesn't look like it vanished.
+        const kind = resolvePalLocationKind(pal);
+        if (kind === "base") {
+          setLocFilter(
+            { type: "label", label: resolvePalLocation(pal) },
+            { skipRender: true }
+          );
+        } else if (kind === "party" || kind === "palbox" || kind === "guild") {
+          setLocFilter({ type: "kind", kind }, { skipRender: true });
+        } else {
+          setLocFilter({ type: "all" }, { skipRender: true });
+        }
+        selectPal(pal.index);
+        return true;
+      }
+      if (spec?.containerId) focusFilterForDestination(spec.containerId);
+      else if (createSpecs?.length) setLocFilter({ type: "all" }, { skipRender: true });
+      return false;
     }
 
     function destByKind(kind) {
@@ -4141,6 +4174,7 @@
         palVariant: variant,
         workSuitability: spec.workSuitability || maxWorkBonusForPal(cid),
         passives: normalizePassiveList(usePassives),
+        unlockAllMoves: true,
       };
     }
 
@@ -4179,18 +4213,13 @@
         return;
       }
       ensurePaldexPassiveNames();
-      state._paldexSpeciesCache = null;
       state.paldexWizard = { fillMode: null, modded: null, targetKind: null };
       $("paldexModalSubtitle").textContent =
         "Pick a target box. Watch capacity — do not exceed free slots.";
       const guildBtn = $("paldexTargetGuild");
       if (guildBtn) {
-        const gpsOk = !!state.guildStorageLoaded;
-        if (gpsOk) ensureGuildDestination();
-        guildBtn.disabled = !gpsOk || !guildDestination();
-        guildBtn.title = gpsOk
-          ? ""
-          : "Guild storage (*_dps.sav / GlobalPalStorage) was not loaded with this world. Open the full world folder (with Players), not Level.sav alone.";
+        ensureGuildDestination();
+        guildBtn.disabled = !guildDestination();
       }
       showPaldexStep("target");
       $("paldexModal").classList.remove("hidden");
@@ -4198,18 +4227,9 @@
     }
 
     function onPaldexTargetPick(targetKind) {
-      if (targetKind === "guild") {
-        if (!state.guildStorageLoaded) {
-          setStatus(
-            "Guild / Dimensional storage was not loaded. Open the world folder that includes Players/*_dps.sav (Desktop copy of the full world), then try again.",
-            "bad"
-          );
-          return;
-        }
-        if (!guildDestination()) {
-          setStatus("Guild Box not found in this save.", "bad");
-          return;
-        }
+      if (targetKind === "guild" && !guildDestination()) {
+        setStatus("Guild Box not found in this save.", "bad");
+        return;
       }
       if (targetKind === "palbox" && !palboxDestination()) {
         setStatus("Palbox not found in this save.", "bad");
@@ -4252,7 +4272,7 @@
       const modded = state.paldexWizard.modded;
       const modeLabel =
         modded == null ? "combo / per-set" : modded ? "Modded" : "Legit";
-      const fillMode = state.paldexWizard.fillMode || "all";
+      const fillMode = state.paldexWizard.fillMode || "missing";
       const boxLabel = paldexTargetLabel();
       const fillLabels = {
         missing: "missing species only (keep yours)",
@@ -4279,17 +4299,18 @@
         warn =
           `<br><br><span style="color:#f6a36c;font-weight:700;">Nothing to add</span> — ` +
           (fillMode === "missing"
-            ? "you already own every catalog species somewhere in this save. Go Back and choose <strong>Add full pack</strong> or <strong>Delete &amp; replace</strong>."
-            : "species list is empty — hard-refresh (Ctrl+F5) and re-upload gzo-data.js if this persists.");
+            ? "you already own every catalog species."
+            : "species list is empty.");
       } else if (over) {
         warn =
           `<br><br><span style="color:#ff8a8a;font-weight:700;">Warning: not enough ${escapeHtml(boxLabel)} space.</span> ` +
-          `Needs about <strong>${addN}</strong> free slot(s); you have <strong>${free}</strong> ` +
-          `(max <strong>${maxSlots}</strong>).`;
+          `A single pack needs about <strong>${addN}</strong> slot(s) but only <strong>${free}</strong> are free ` +
+          `(max <strong>${maxSlots}</strong>). Guild ♂+♀ combo is ~12× one pack.`;
       } else {
         warn =
           `<br><br><span style="color:#f6c56c;font-weight:700;">${escapeHtml(boxLabel)} check:</span> ` +
-          `~<strong>${addN}</strong> for one full catalog; <strong>${free}</strong> free of <strong>${maxSlots}</strong>.`;
+          `~<strong>${addN}</strong> for one pack; <strong>${free}</strong> free of <strong>${maxSlots}</strong>. ` +
+          `Guild ♂+♀ combo = 12 sets with 2 empty pages between male and female.`;
       }
       let head = "";
       if (fillMode === "replace") {
@@ -4303,8 +4324,9 @@
       }
       const capsLine =
         modded == null && paldexTargetKind() === "guild"
-          ? `Next you’ll pick a <strong>guild combo</strong>. Caps come from each set.<br><br>`
-          : `New pals use <strong>${modeLabel}</strong> caps. Catalog includes regular pals plus helicopters, tower bosses, world bosses, NPCs, raids &amp; predators.<br><br>`;
+          ? `Next you’ll pick a <strong>guild combo</strong> (full mix, modded-only, legit-only, or × repeats). Caps come from each set.<br><br>`
+          : `New pals use <strong>${modeLabel}</strong> caps. Only real pals are included ` +
+            `(NPCs / raid forms skipped).<br><br>`;
       $("paldexConfirmText").innerHTML =
         head +
         capsLine +
@@ -4374,7 +4396,7 @@
         out.push({
           id: `guild_repeat_${t.key}_${modeKey}`,
           name: `${t.name} ${modeLabel}`,
-          description: `Full catalog (~541 pals + bosses/NPCs/heli) — ${t.name.toLowerCase()} set (${modeLabel.toLowerCase()} caps). Next: pick ×1–×5.`,
+          description: `Full species catalog — ${t.name.toLowerCase()} set (${modeLabel.toLowerCase()} caps). Next: pick ×1–×5.`,
           guildOnly: true,
           askRepeats: true,
           selectPassives: !!t.selectPassives,
@@ -4440,7 +4462,7 @@
     function renderPaldexPresetList() {
       const modePicked = state.paldexWizard.modded != null;
       const modded = !!state.paldexWizard.modded;
-      const fillMode = state.paldexWizard.fillMode || "all";
+      const fillMode = state.paldexWizard.fillMode || "missing";
       const targetKind = paldexTargetKind();
       const list = allPaldexPresetsForWizard();
       const root = $("paldexPresetList");
@@ -4594,19 +4616,12 @@
     async function applyPaldexPreset(packId, passives) {
       const pack = getPaldexPackById(packId);
       if (!pack || pack.disabled) return;
-      const fillMode = state.paldexWizard.fillMode || "all";
+      const fillMode = state.paldexWizard.fillMode || "missing";
       const targetKind = paldexTargetKind();
       const boxLabel = paldexTargetLabel();
       const box = paldexTargetDestination();
       if (!box) {
         setStatus(`${boxLabel} not found.`, "bad");
-        return;
-      }
-      if (targetKind === "guild" && !state.guildStorageLoaded) {
-        setStatus(
-          "Guild storage was not loaded with this world — open the full world folder (Players/*_dps.sav), then try again.",
-          "bad"
-        );
         return;
       }
       let modded = !!state.paldexWizard.modded;
@@ -4625,9 +4640,6 @@
       syncModdedUi();
 
       const indices = boxPalIndices(targetKind);
-      // Always rebuild catalog for this run (avoid stale empty cache).
-      state._paldexSpeciesCache = null;
-
       if (fillMode === "replace") {
         for (const idx of indices) {
           state.deletes.add(idx);
@@ -4659,13 +4671,10 @@
           ];
       const setSpecies = sets.map((set) => speciesForPaldexSet(pack, set, fillMode));
       if (!setSpecies.some((list) => list.length)) {
-        if (fillMode === "replace") {
-          for (const idx of indices) state.deletes.delete(idx);
-        }
         setStatus(
           fillMode === "missing"
-            ? "Nothing to add — you already own every species in this pack. Use Add full pack or Replace instead."
-            : "No species available for this pack. Hard-refresh (Ctrl+F5) and confirm gzo-data.js uploaded.",
+            ? "Nothing to add — you already own every species in this pack."
+            : "No species available for this pack.",
           "bad"
         );
         return;
@@ -4796,7 +4805,7 @@
       setStatus(
         `Staged ${stagedCount} ${boxLabel} add(s) (${sets.length} set${
           sets.length === 1 ? "" : "s"
-        } · ${keepNote} · ${setNames}). Click Save Level.sav to write them into the save.`,
+        } · ${keepNote} · ${setNames}). Save to write.`,
         "ok"
       );
     }
@@ -4857,6 +4866,7 @@
         rankWork: L.enh,
         workSuitability: maxWorkBonusForPal(pal.characterId),
         isAwakening: true,
+        unlockAllMoves: true,
       };
     }
 
@@ -4890,6 +4900,7 @@
             rankWork: patch.rankWork,
             workSuitability: patch.workSuitability,
             isAwakening: patch.isAwakening,
+            unlockAllMoves: true,
           });
         } else {
           state.edits.set(pal.index, patch);
@@ -4916,6 +4927,66 @@
         maxFriendship: true,
         unlockAllMoves: true,
       };
+    }
+
+    function unlockAllMovesPatch(pal) {
+      const existing = state.edits.get(pal.index) || {};
+      return {
+        ...existing,
+        index: pal.index,
+        unlockAllMoves: true,
+      };
+    }
+
+    function stageUnlockAllMovesCurrent() {
+      if (state.selectedPendingIndex != null) {
+        const i = state.selectedPendingIndex;
+        if (!state.creates[i]) return;
+        state.creates[i].unlockAllMoves = true;
+        syncPendingSave();
+        renderStats();
+        renderList();
+        setStatus("Staged unlock-all-attacks for this unsaved create. Save Level.sav to write.", "ok");
+        return;
+      }
+      if (state.selectedIndex == null) {
+        setStatus("Select a pal first (or use Tab presets → Unlock all attacks).", "bad");
+        return;
+      }
+      state.edits.set(state.selectedIndex, unlockAllMovesPatch({ index: state.selectedIndex }));
+      syncPendingSave();
+      renderStats();
+      renderList();
+      selectPal(state.selectedIndex);
+      setStatus(`Staged unlock-all-attacks for pal #${state.selectedIndex}. Save Level.sav to write.`, "ok");
+    }
+
+    function applyUnlockAllMovesToTab() {
+      const list = palsInCurrentTab();
+      if (!list.length) {
+        setStatus(`No pals in ${currentTabLabel()}.`, "bad");
+        return;
+      }
+      let n = 0;
+      for (const pal of list) {
+        if (pal._pendingCreate) {
+          const i = pendingCreateIndexFromRow(pal);
+          const c = state.creates[i];
+          if (!c) continue;
+          c.unlockAllMoves = true;
+          n += 1;
+        } else {
+          state.edits.set(pal.index, unlockAllMovesPatch(pal));
+          n += 1;
+        }
+      }
+      syncPendingSave();
+      renderStats();
+      renderList();
+      renderCreateStaged();
+      if (state.selectedIndex != null) selectPal(state.selectedIndex);
+      else if (state.selectedPendingIndex != null) selectPendingCreate(state.selectedPendingIndex);
+      setStatus(`Staged unlock-all-attacks for ${n} pal(s) in ${currentTabLabel()}.`, "ok");
     }
 
     function applyHealTrustMovesToTab() {
@@ -4957,7 +5028,7 @@
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
       const n = palsInCurrentTab().length;
       $("tabPresetScope").textContent =
-        `${n} pal(s) in ${currentTabLabel()} — max / heal+trust+moves / delete (staged until Save).`;
+        `${n} pal(s) in ${currentTabLabel()} — max / unlock attacks / heal+trust / delete (staged until Save).`;
     }
 
     function setLocFilter(filter, opts) {
@@ -5332,8 +5403,10 @@
     $("tabPresetMaxLegit").addEventListener("click", () => applyMaxEverythingToTab(false));
     $("tabPresetMaxModded").addEventListener("click", () => applyMaxEverythingToTab(true));
     $("tabPresetHealTrustMoves").addEventListener("click", applyHealTrustMovesToTab);
+    $("tabPresetUnlockAttacks").addEventListener("click", applyUnlockAllMovesToTab);
     $("tabPresetDeleteGhosts").addEventListener("click", stageDeleteSeparatorGhosts);
     $("tabPresetDeleteAll").addEventListener("click", stageDeleteAllInTab);
+    $("unlockAttacksBtn").addEventListener("click", stageUnlockAllMovesCurrent);
 
     $("receivePaldexBtn").addEventListener("click", openReceivePaldexWizard);
     $("paldexTargetPalbox").addEventListener("click", () => onPaldexTargetPick("palbox"));
@@ -5440,18 +5513,9 @@
       state.sessionId = j.sessionId;
       state.browserSession = j._browser ? j : null;
       state.localSession = !!(j && j.sessionId && !j._browser && localBridge);
-      state.guildStorageLoaded = !!(
-        (j._browser && j._browser.globalGvas) ||
-        j.globalPalStoragePath ||
-        j.globalGvasPath
-      );
       state.pals = j.pals || [];
       state.destinations = j.destinations || [];
-      if (state.guildStorageLoaded) ensureGuildDestination();
-      else {
-        // Keep a disabled stub out of the way — don't fake a writable guild box.
-        state.destinations = (state.destinations || []).filter((d) => d.kind !== "guild");
-      }
+      ensureGuildDestination();
       state.world = j.world || { players: [], bags: [], worldContainers: [], tech: {} };
       state.worldPlayerEdits.clear();
       state.worldInventoryEdits.clear();
@@ -5515,6 +5579,53 @@
       }
     }
 
+    async function loadFromLocateFolder() {
+      if (!window.GzoBrowser) {
+        setStatus("Engine missing — gzo-data.js failed to load.", "bad");
+        return;
+      }
+      if (typeof window.GzoBrowser.openWorldFolderLocate !== "function") {
+        setStatus("Locate support missing — re-upload gzo-data.js from the latest build.", "bad");
+        return;
+      }
+      try {
+        const j = await window.GzoBrowser.openWorldFolderLocate((msg) => {
+          if (msg === "__HIDE_BUSY__") {
+            hideBusy();
+            return;
+          }
+          if (msg === "__SHOW_BUSY__") {
+            showBusy("Loading world", "Working…", {
+              hint: "AppData is OK. Large worlds can take a minute.",
+            });
+            return;
+          }
+          if (/Locate your world/i.test(msg)) return;
+          if ($("busyOverlay")?.classList.contains("hidden")) {
+            showBusy("Loading world", msg, {
+              hint: "Reading from your save folder. No Desktop copy needed.",
+            });
+          } else {
+            setBusyMsg(msg, "Loading world");
+          }
+        });
+        if (!j.ok) throw new Error(j.error || "Load failed");
+        showBusy("Loading world", "Finishing up…", { hint: false });
+        await applyLoadedSession(j);
+        if ($("saveBtn")) $("saveBtn").textContent = "Save Level.sav…";
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          setStatus("Folder locate cancelled.");
+          return;
+        }
+        $("landing").classList.remove("hidden");
+        $("workspace").classList.add("hidden");
+        setStatus(String(err.message || err), "bad");
+      } finally {
+        hideBusy();
+      }
+    }
+
     async function loadFromLocalPath(inputPath) {
       const pathVal = String(inputPath || "").trim();
       if (!pathVal) {
@@ -5524,7 +5635,7 @@
       if (!(await checkBridge())) return;
       try {
         showBusy("Loading world", "Reading save from disk…", {
-          hint: "Reading from the path you chose.",
+          hint: "Local bridge reads AppData directly — no Desktop copy.",
         });
         const r = await fetch(API + "/api/load-path", {
           method: "POST",
@@ -5547,7 +5658,7 @@
 
     async function locateAndLoadFolder() {
       if (!localBridge) {
-        setStatus("Start Open Palworld Editor.bat to use Browse…, or copy the world to Desktop and use Open world folder.", "bad");
+        setStatus("Start Open Palworld Editor.bat to locate AppData folders.", "bad");
         return;
       }
       if (!(await checkBridge())) return;
@@ -5600,7 +5711,7 @@
           }
           if ($("busyOverlay")?.classList.contains("hidden")) {
             showBusy("Loading world", msg, {
-              hint: "Use a Desktop copy of the world folder (Chrome blocks AppData).",
+              hint: "First visit can take up to a minute while the save engine downloads.",
             });
           } else {
             setBusyMsg(msg, "Loading world");
@@ -5640,14 +5751,14 @@
           }
           if (msg === "__SHOW_BUSY__") {
             showBusy("Loading Game Pass world", "Working…", {
-              hint: "Quit Palworld + Xbox sync. Use a Desktop copy of wgs.",
+              hint: "Quit Palworld + Xbox cloud sync. Packages\\…\\wgs is OK.",
             });
             return;
           }
-          if (/Locate Game Pass|Pick your Game Pass|Pick a writable Game Pass/i.test(msg)) return;
+          if (/Locate Game Pass|Pick your Game Pass/i.test(msg)) return;
           if ($("busyOverlay")?.classList.contains("hidden")) {
             showBusy("Loading Game Pass world", msg, {
-              hint: "Quit Palworld + Xbox sync. Use a Desktop copy of SystemAppData\\wgs.",
+              hint: "Quit Palworld + Xbox cloud sync. Packages\\…\\wgs is OK — no Desktop copy.",
             });
           } else {
             setBusyMsg(msg, "Loading Game Pass world");
@@ -5657,7 +5768,10 @@
         showBusy("Loading Game Pass world", "Finishing up…", { hint: false });
         await applyLoadedSession(j);
         if ($("saveBtn")) {
-          $("saveBtn").textContent = "Save (write back to Game Pass)";
+          $("saveBtn").textContent =
+            j.xgpLocate || j._browser?.xgpLocate
+              ? "Save Game Pass patch ZIP…"
+              : "Save (write back to Game Pass)";
         }
       } catch (err) {
         if (err && err.name === "AbortError") {
@@ -5692,7 +5806,7 @@
           }
           if ($("busyOverlay")?.classList.contains("hidden")) {
             showBusy("Loading world", msg, {
-              hint: "Save will download the edited Level.sav — put it back in your world folder.",
+              hint: "Use the Windows file dialog. AppData is OK here. Save will download the edited Level.sav.",
             });
           } else {
             setBusyMsg(msg, "Loading world");
@@ -5727,7 +5841,7 @@
       if (browserNotice) browserNotice.classList.toggle("hidden", !!localBridge);
       if ($("locateFolderBtn")) $("locateFolderBtn").disabled = !localCanPickFolder;
       if ($("openFolderBtn")) {
-        $("openFolderBtn").textContent = "Open world folder";
+        $("openFolderBtn").textContent = "Open writable folder";
       }
     }
 
@@ -5741,7 +5855,7 @@
           if (!j.ok) throw new Error(j.error || "Could not list worlds");
           const worlds = j.worlds || [];
           if (!worlds.length) {
-            root.innerHTML = `<div class="empty">No worlds found under <code>${j.root || "%LOCALAPPDATA%\\Pal\\Saved\\SaveGames"}</code>. Use <strong>Browse…</strong>, paste a path, or copy a world to Desktop and use <strong>Open world folder</strong>.</div>`;
+            root.innerHTML = `<div class="empty">No worlds found under <code>${j.root || "%LOCALAPPDATA%\\Pal\\Saved\\SaveGames"}</code>. Use <strong>Locate folder…</strong> or paste a path.</div>`;
             return;
           }
           root.innerHTML = worlds
@@ -5766,7 +5880,7 @@
         }
         return;
       }
-      root.innerHTML = `<div class="empty">Copy your world folder (with <code>Level.sav</code>) to the Desktop, then click <strong>Open world folder</strong>. After editing, copy it back over the original.</div>`;
+      root.innerHTML = `<div class="empty">Click <strong>Locate save folder</strong> and choose the world folder with Level.sav — AppData is fine. On Save, overwrite that same Level.sav.</div>`;
     }
 
     async function detectLocalBridge() {
@@ -5783,14 +5897,17 @@
       updateLandingMode();
       await refreshWorldList();
       if (localBridge) {
-        setStatus("Local bridge ready — click a world, or Open world folder for a Desktop copy.", "ok");
+        setStatus("Local bridge ready — Locate folder or click a world below.", "ok");
       } else if (!window.GzoBrowser) {
         setStatus("gzo-data.js failed to load.", "bad");
       } else {
-        setStatus("Ready — copy your world to Desktop, then Open world folder.");
+        setStatus("Ready — Locate save folder (AppData OK).");
       }
     }
 
+    if ($("locateSaveFolderBtn")) {
+      $("locateSaveFolderBtn").addEventListener("click", () => loadFromLocateFolder());
+    }
     $("openFolderBtn").addEventListener("click", () => loadFromFolderPicker());
     if ($("openGamePassBtn")) {
       $("openGamePassBtn").addEventListener("click", () => loadFromGamePassPicker());
@@ -5904,8 +6021,11 @@
           if (j.pals) {
             state.selectedIndex = null;
             if (state.editorMode === "pals") setRightMode("edit");
-            revealPalsAfterSave(creates, j.newPals);
+            const revealed = revealPalsAfterSave(creates, j.newPals);
             fillCreateDestSelect();
+            if (createN > 0 && !revealed) {
+              setLocFilter({ type: "all" }, { skipRender: true });
+            }
           }
           renderStats();
           renderList();
@@ -5916,10 +6036,15 @@
           if (j.wrotePath) bits.push("Level.sav");
           if (j.wroteGlobalPath) bits.push("Guild/DPS");
           if (j.techWrote) bits.push("player tech");
-          setStatus(
-            `Saved in place (${bits.join(", ") || "done"}). Backup: ${j.folderBackupPath || "gzo-backups/…"}`,
-            "ok"
-          );
+          let msg = `Saved in place (${bits.join(", ") || "done"}). Backup: ${j.folderBackupPath || "gzo-backups/…"}`;
+          if (createN > 0 && j.pals) {
+            const revealed = state.selectedIndex != null;
+            if (!revealed) {
+              msg +=
+                " New pal is in the save — check the Pals (All) tab, or load the world once in-game if it still doesn’t show.";
+            }
+          }
+          setStatus(msg, "ok");
         } catch (err) {
           setStatus(String(err.message || err), "bad");
         } finally {
@@ -5975,8 +6100,11 @@
           state.destinations = j.destinations || state.destinations;
           state.selectedIndex = null;
           if (state.editorMode === "pals") setRightMode("edit");
-          revealPalsAfterSave(creates, j.newPals);
+          const revealed = revealPalsAfterSave(creates, j.newPals);
           fillCreateDestSelect();
+          if (createN > 0 && !revealed) {
+            setLocFilter({ type: "all" }, { skipRender: true });
+          }
         } else {
           for (const e of edits) {
             const pal = state.pals.find((p) => p.index === e.index);
@@ -6049,14 +6177,18 @@
         if (j.playersChanged) bits.push(`${j.playersChanged} player`);
         if (j.inventoryChanged) bits.push(`${j.inventoryChanged} inventory`);
         if (j.techWrote) bits.push("tech");
-        setStatus(
-          j.xgp
-            ? `Saved into Desktop wgs (${bits.join(", ") || "done"}). Backup: ${j.folderBackupPath || "gzo-xgp-backups/…"}. Copy this wgs folder back into Packages when done.`
-            : j.downloadOnly
-              ? `Downloaded ${j.wrotePath || "Level.sav"}${j.wroteGlobalPath ? ` + ${j.wroteGlobalPath}` : ""} (${bits.join(", ") || "done"}). Put the file(s) back in your world folder.`
-              : `Saved (${bits.join(", ") || "done"}).${j.wroteGlobalPath ? ` Guild file: ${j.wroteGlobalPath}.` : ""} Backup: ${j.folderBackupPath || "gzo-backups/…"}. Copy the Desktop folder back over the original when done.`,
-          "ok"
-        );
+        let msg = j.xgp
+          ? j.xgpLocate || j.downloadOnly
+            ? `Game Pass patch ready (${bits.join(", ") || "done"}): ${j.wrotePath || "gzo-xgp-patch.zip"}. Extract the ZIP into your user_* folder (overwrite), then launch Palworld.`
+            : `Saved back into Game Pass containers (${bits.join(", ") || "done"}). Backup: ${j.folderBackupPath || "gzo-xgp-backups/…"}.`
+          : j.downloadOnly
+            ? `Wrote ${j.wrotePath || "Level.sav"}${j.wroteGlobalPath ? ` + ${j.wroteGlobalPath}` : ""} (${bits.join(", ") || "done"}). Use the Save dialog to overwrite the file in your save folder (or accept the download).`
+            : `Saved (${bits.join(", ") || "done"}).${j.wroteGlobalPath ? ` Guild file: ${j.wroteGlobalPath}.` : ""} Backup: ${j.folderBackupPath || "gzo-backups/…"}.`;
+        if (createN > 0 && j.pals && state.selectedIndex == null) {
+          msg +=
+            " New pal is in the save — check the Pals (All) tab, or load the world once in-game if it still doesn’t show.";
+        }
+        setStatus(msg, "ok");
       } catch (err) {
         setStatus(String(err.message || err), "bad");
       } finally {
