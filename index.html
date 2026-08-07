@@ -421,6 +421,53 @@
       letter-spacing: 0.02em;
     }
 
+    .download-link--alt {
+      color: #e8f1ff;
+      border: 1px solid rgba(0, 229, 255, 0.45);
+      background: linear-gradient(180deg, rgba(0, 229, 255, 0.22) 0%, rgba(0, 120, 160, 0.35) 100%);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .download-link--alt:hover {
+      filter: brightness(1.08);
+      border-color: rgba(0, 229, 255, 0.8);
+    }
+
+    .modal-body {
+      color: #e8eef8;
+      font-size: 1.05rem;
+      line-height: 1.65;
+      margin: 0 0 22px;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .modal-actions .download-link {
+      text-transform: none;
+      letter-spacing: 0.03em;
+    }
+
+    .modal-ghost {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: transparent;
+      color: #fff;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .modal-ghost:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
     .discord-link {
       display: inline-flex;
       align-items: center;
@@ -656,6 +703,12 @@
         </svg>
         Download GZO Companion
       </a>
+      <button type="button" class="download-link download-link--alt" id="blManagerBtn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L11 12.59V4a1 1 0 0 1 1-1zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1z"/>
+        </svg>
+        Download Gzo BL Manager
+      </button>
       <a
         class="discord-link"
         href="https://discord.gg/4hGKAHdvp6"
@@ -667,11 +720,35 @@
         </svg>
         Discord — GameZoneOfficial
       </a>
-      <p class="download-note">Windows portable · Palworld live companion · v0.5.28</p>
+      <p class="download-note">Windows portable · Companion + Borderlands mod manager</p>
     </div>
   </div>
 
   <p class="footer-note">Created by <strong>Ynot</strong></p>
+
+  
+  <div class="modal-overlay" id="blManagerModal" role="dialog" aria-modal="true" aria-labelledby="blManagerTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="blManagerTitle">Gzo BL Manager</div>
+        <button type="button" class="modal-close" id="blManagerClose" aria-label="Close">&times;</button>
+      </div>
+      <p class="modal-body">
+        This is a Borderlands mod manager — just like Vortex, Thunderstore, or CurseForge,
+        but made for Borderlands. It helps you install SDKs, paks, and other mods easily,
+        and keeps you on updated versions.
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="modal-ghost" id="blManagerCancel">Not now</button>
+        <a
+          class="download-link"
+          id="blManagerDownload"
+          href="https://github.com/Ynot-GZO/GameZoneOfficial/releases/latest/download/GzoBLManager.exe"
+          download="GzoBLManager.exe"
+        >Download GzoBLManager.exe</a>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="creditsModal" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
     <div class="modal">
@@ -702,20 +779,36 @@
 
   <script>
     (function () {
-      var modal = document.getElementById("creditsModal");
-      var openBtn = document.getElementById("creditsBtn");
-      var closeBtn = document.getElementById("creditsClose");
+      var creditsModal = document.getElementById("creditsModal");
+      var creditsOpen = document.getElementById("creditsBtn");
+      var creditsClose = document.getElementById("creditsClose");
+      var blModal = document.getElementById("blManagerModal");
+      var blOpen = document.getElementById("blManagerBtn");
+      var blClose = document.getElementById("blManagerClose");
+      var blCancel = document.getElementById("blManagerCancel");
 
-      function openCredits() { modal.classList.add("active"); }
-      function closeCredits() { modal.classList.remove("active"); }
+      function openModal(el) { if (el) el.classList.add("active"); }
+      function closeModal(el) { if (el) el.classList.remove("active"); }
+      function closeAll() {
+        closeModal(creditsModal);
+        closeModal(blModal);
+      }
 
-      openBtn.addEventListener("click", openCredits);
-      closeBtn.addEventListener("click", closeCredits);
-      modal.addEventListener("click", function (e) {
-        if (e.target === modal) closeCredits();
+      if (creditsOpen) creditsOpen.addEventListener("click", function () { openModal(creditsModal); });
+      if (creditsClose) creditsClose.addEventListener("click", function () { closeModal(creditsModal); });
+      if (creditsModal) creditsModal.addEventListener("click", function (e) {
+        if (e.target === creditsModal) closeModal(creditsModal);
       });
+
+      if (blOpen) blOpen.addEventListener("click", function () { openModal(blModal); });
+      if (blClose) blClose.addEventListener("click", function () { closeModal(blModal); });
+      if (blCancel) blCancel.addEventListener("click", function () { closeModal(blModal); });
+      if (blModal) blModal.addEventListener("click", function (e) {
+        if (e.target === blModal) closeModal(blModal);
+      });
+
       document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") closeCredits();
+        if (e.key === "Escape") closeAll();
       });
     })();
   </script>
